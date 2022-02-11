@@ -1,0 +1,41 @@
+# This is a "Composite Action" for invoking Meringue
+# It's intended to keep in one place the steps to:
+#   1. Invoke meringue
+#   2. Store log files
+# This modularity might be useful in the future to also build in reporting + real-time metric aggregation
+# Docs: https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
+name: 'Run Meringue'
+description: 'Run a single instance of a fuzzing experiment with Meringue'
+inputs:
+  meringue.duration:
+    decription: 'Textual representation of the maximum amount of time to execute the fuzzing campaign in the ISO-8601 duration format. The default value is one day.'
+    required: false
+    default: 'P1D'
+  meringue.testClass:
+    description: 'The non-empty, non-null, fully-qualified name of the test class'
+    required: true
+  meringue.testMethod:
+    description: 'The non-empty, non-null name of the test method.'
+    required: true
+  merinuge.javaExec:
+    description: 'The Java executable that should be used. If not specified, the executable used to run Maven will be used.'
+    required: false
+  meringue.framework:
+    description: 'The non-empty, non-null, fully-qualified name of the fuzzing framework that should be used.'
+    required: true
+runs:
+  using: "composite"
+  env:
+    JAVA_HOME: /usr/lib/jvm/jdk1.8.0_301/
+    MAVEN_OPTS: -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true
+    MAVEN_CLI_OPTS: --batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true
+    INST_HOME: /usr/lib/jvm/jdk1.8.0_301/jre/
+  steps:
+    - name: Execute fuzzer
+      run: |
+        echo "Meringue called with inputs: ${{ inputs.meringue.duration }}, ${{ inputs.meringue.testClass }} , ${{ inputs.meringue.testMethod }} , ${{ inputs.meringue.javaExec }} ,${{ inputs.meringue.framework }}"
+        echo "Meringue called with inputs: ${{ inputs.meringue.duration }}, ${{ inputs.meringue.testClass }} , ${{ inputs.meringue.testMethod }} , ${{ inputs.meringue.javaExec }} ,${{ inputs.meringue.framework }}" > log.txt
+    - uses: actions/upload-artifact@v2
+      with:
+        name: logfilename
+        path: log.txt
