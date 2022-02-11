@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue.internal;
+package edu.neu.ccs.prl.meringue;
 
 import org.jacoco.agent.rt.RT;
 

@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue.internal;
+package edu.neu.ccs.prl.meringue;
 
 import java.io.File;
 import java.io.Serializable;
@@ -36,29 +36,32 @@ public final class CampaignConfiguration implements Serializable {
      */
     private final File javaExec;
     /**
-     * JAR file containing all necessary classpath elements for test JVMs.
+     * JAR file containing all necessary class path elements for test JVMs.
      * <p>
      * Non-null.
      */
-    private final File classPathJar;
+    private final File testClassPathJar;
     /**
      * Maximum amount of time to execute the campaign for.
      * <p>
      * Non-negative, non-null.
      */
     private final Duration duration;
-
     /**
      * Java command line options that should be used for test JVMs.
      * <p>
      * Non-null, contains no null elements, unmodifiable.
      */
     private final List<String> javaOptions;
+    /**
+     * True if test JVMs should suspend and wait for a debugger to attach.
+     */
+    private final boolean debug;
 
     public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
-                                 List<String> javaOptions, File classPathJar, File javaExec) {
+                                 List<String> javaOptions, File testClassPathJar, File javaExec, boolean debug) {
         if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative()
-                || !outputDir.isDirectory() || !classPathJar.isFile() || !javaExec.isFile()) {
+                || !outputDir.isDirectory() || !testClassPathJar.isFile() || !javaExec.isFile()) {
             throw new IllegalArgumentException();
         }
         this.testClassName = testClassName;
@@ -71,8 +74,9 @@ public final class CampaignConfiguration implements Serializable {
                 throw new NullPointerException();
             }
         }
-        this.classPathJar = classPathJar;
+        this.testClassPathJar = testClassPathJar;
         this.javaExec = javaExec;
+        this.debug = debug;
     }
 
     public Duration getDuration() {
@@ -83,8 +87,8 @@ public final class CampaignConfiguration implements Serializable {
         return javaOptions;
     }
 
-    public File getClassPathJar() {
-        return classPathJar;
+    public File getTestClassPathJar() {
+        return testClassPathJar;
     }
 
     public File getOutputDir() {
@@ -101,5 +105,9 @@ public final class CampaignConfiguration implements Serializable {
 
     public File getJavaExec() {
         return javaExec;
+    }
+
+    public boolean isDebug() {
+        return debug;
     }
 }

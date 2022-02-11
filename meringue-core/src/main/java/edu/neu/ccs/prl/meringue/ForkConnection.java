@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue.internal;
+package edu.neu.ccs.prl.meringue;
 
 import java.io.Closeable;
 import java.io.IOException;

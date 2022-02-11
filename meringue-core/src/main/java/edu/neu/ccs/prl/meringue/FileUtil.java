@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue.internal;
+package edu.neu.ccs.prl.meringue;
 
 import java.io.BufferedOutputStream;
 import java.io.File;

@@ -1,6 +1,5 @@
 package edu.neu.ccs.prl.meringue;
 
-import edu.neu.ccs.prl.meringue.internal.*;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -31,28 +30,23 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
     /**
-     * A list of class files to include in reports. May use wildcard
+     * List of class files to include in reports. May use wildcard
      * characters (* and ?). By default, all files are included.
      */
     @Parameter
     private List<String> inclusions = new LinkedList<>();
     /**
-     * A list of class files to exclude from reports. May use wildcard
+     * List of class files to exclude from reports. May use wildcard
      * characters (* and ?). By default, no files are excluded.
      */
     @Parameter
     private List<String> exclusions = new LinkedList<>();
     /**
-     * The maximum number of frames to include in stack traces taken for failures.
+     * Maximum number of frames to include in stack traces taken for failures.
      * By default, a maximum of {@code 5} frames are included.
      */
     @Parameter(property = "meringue.maxTraceSize", defaultValue = "5")
     private int maxTraceSize;
-    /**
-     * True if the forked analysis JVM should suspend and wait for a debugger to attach on port 5005.
-     */
-    @Parameter(property = "meringue.debug", defaultValue = "false")
-    private boolean debug;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -88,12 +82,16 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             throws MojoExecutionException {
         File analysisJar = createAnalysisManifestJar(config, framework);
         List<String> options = new LinkedList<>(config.getJavaOptions());
-        if (debug) {
+        if (config.isDebug()) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
-        List<File> classPathElements = new LinkedList<>(Arrays.asList(framework.getAnalysisClassPathElements()));
+        List<File> classPathElements = Arrays.asList(
+                analysisJar,
+                config.getTestClassPathJar(),
+                createFrameworkClassPathJar(framework)
+        );
         classPathElements.add(analysisJar);
-        classPathElements.add(config.getClassPathJar());
+        classPathElements.add(config.getTestClassPathJar());
         String classPath = classPathElements.stream()
                 .map(File::getAbsolutePath)
                 .map(SurefireHelper::escapeToPlatformPath)
@@ -105,7 +103,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 config.getJavaExec(),
                 AnalysisForkMain.class.getName(),
                 options.toArray(new String[0]),
-                debug,
+                config.isDebug(),
                 new String[0]
         );
     }
@@ -143,7 +141,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 FileUtil.getClassPathElement(PreMain.class),
                 FileUtil.getClassPathElement(Analyzer.class)
         );
-        classPathElements.addAll(Arrays.asList(framework.getAnalysisClassPathElements()));
+        classPathElements.addAll(Arrays.asList(framework.getFrameworkClassPathElements()));
         try {
             File jar = new File(config.getOutputDir(), "analysis.jar");
             FileUtil.buildManifestJar(classPathElements, jar);

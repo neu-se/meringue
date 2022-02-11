@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue.internal;
+package edu.neu.ccs.prl.meringue;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,5 +18,5 @@ public interface FuzzFramework {
 
     Class<? extends Replayer> getReplayerClass();
 
-    File[] getAnalysisClassPathElements();
+    File[] getFrameworkClassPathElements();
 }

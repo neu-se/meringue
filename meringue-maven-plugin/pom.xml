@@ -30,11 +30,6 @@
             <artifactId>maven-surefire-common</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.21</version>
-        </dependency>
-        <dependency>
             <groupId>org.jacoco</groupId>
             <artifactId>org.jacoco.agent</artifactId>
             <classifier>runtime</classifier>
@@ -46,7 +41,6 @@
         <dependency>
             <groupId>edu.neu.ccs.prl.meringue</groupId>
             <artifactId>meringue-core</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <build>

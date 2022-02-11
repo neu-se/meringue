@@ -1,8 +1,5 @@
 package edu.neu.ccs.prl.meringue;
 
-import edu.neu.ccs.prl.meringue.internal.CampaignConfiguration;
-import edu.neu.ccs.prl.meringue.internal.FuzzFramework;
-import edu.neu.ccs.prl.meringue.internal.FileUtil;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -13,15 +10,12 @@ import org.apache.maven.surefire.booter.SystemUtils;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 abstract class AbstractMeringueMojo extends AbstractMojo {
     /**
-     * The current Maven project.
+     * Current Maven project.
      */
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -31,25 +25,24 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(property = "meringue.outputDir", defaultValue = "${project.build.directory}/meringue")
     private File outputDir;
     /**
-     * The non-empty, non-null, fully-qualified name of the test class.
+     * Fully-qualified name of the test class.
      *
      * @see Class#forName(String className)
      */
     @Parameter(property = "meringue.testClass", required = true)
     private String testClass;
     /**
-     * The non-empty, non-null name of the test method.
+     * Name of the test method.
      */
     @Parameter(property = "meringue.testMethod", required = true)
     private String testMethod;
     /**
-     * The Java executable that should be used.
-     * If not specified, the executable used to run Maven will be used.
+     * Java executable that should be used. If not specified, the executable used to run Maven will be used.
      */
     @Parameter(property = "meringue.javaExec")
     private File javaExec = FileUtil.javaHomeToJavaExec(new File(System.getProperty("java.home")));
     /**
-     * The non-empty, non-null, fully-qualified name of the fuzzing framework that should be used.
+     * Fully-qualified name of the fuzzing framework that should be used.
      */
     @Parameter(property = "meringue.framework", readonly = true, required = true)
     private String framework;
@@ -59,7 +52,7 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(readonly = true)
     private Properties frameworkOptions = new Properties();
     /**
-     * Java command line options that should be used for the forked JVM.
+     * Java command line options that should be used for the test JVM.
      */
     @Parameter(property = "meringue.javaOptions")
     private List<String> javaOptions = new ArrayList<>();
@@ -67,10 +60,15 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
      * Textual representation of the maximum amount of time to execute the fuzzing campaign in the ISO-8601 duration
      * format. The default value is one day.
      * <p>
-     * {@link java.time.Duration#parse(CharSequence)}
+     * See {@link java.time.Duration#parse(CharSequence)}.
      */
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
+    /**
+     * True if test JVMs should suspend and wait for a debugger to attach.
+     */
+    @Parameter(property = "meringue.debug", defaultValue = "false")
+    private boolean debug;
 
     String getTestDescription() {
         return testClass + "#" + testMethod;
@@ -80,7 +78,8 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         validateJavaExec();
         initializeOutputDir();
         return new CampaignConfiguration(testClass, testMethod, Duration.parse(duration), outputDir,
-                javaOptions, javaExec, createClassPathJar());
+                javaOptions, javaExec, createTestClassPathJar(), debug
+        );
     }
 
     Set<File> getTestClasspathElements() throws MojoExecutionException {
@@ -101,6 +100,16 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
+    File createFrameworkClassPathJar(FuzzFramework framework) throws MojoExecutionException {
+        try {
+            File jar = new File(outputDir, "framework.jar");
+            FileUtil.buildManifestJar(Arrays.asList(framework.getFrameworkClassPathElements()), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create framework class path JAR", e);
+        }
+    }
+
     private void validateJavaExec() throws MojoExecutionException {
         if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath()) || !javaExec.isFile()) {
             throw new MojoExecutionException("Invalid Java executable: " + javaExec);
@@ -115,9 +124,9 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
-    private File createClassPathJar() throws MojoExecutionException {
+    private File createTestClassPathJar() throws MojoExecutionException {
         try {
-            File jar = new File(outputDir, "test-class-path.jar");
+            File jar = new File(outputDir, "test.jar");
             FileUtil.buildManifestJar(getTestClasspathElements(), jar);
             return jar;
         } catch (IOException e) {
