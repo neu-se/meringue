@@ -45,7 +45,7 @@
         </dependency>
         <dependency>
             <groupId>edu.neu.ccs.prl.meringue</groupId>
-            <artifactId>meringue-booter</artifactId>
+            <artifactId>meringue-core</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>

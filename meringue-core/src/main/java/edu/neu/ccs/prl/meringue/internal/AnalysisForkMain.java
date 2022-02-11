@@ -19,7 +19,7 @@ public final class AnalysisForkMain {
             String replayerClassName = connection.receive(String.class);
             File[] inputFiles = connection.receive(File[].class);
             StackTraceCleaner cleaner = connection.receive(StackTraceCleaner.class);
-            Replayer replayer = (Replayer) Class.forName(replayerClassName).newInstance();
+            Replayer replayer = (Replayer) Class.forName(replayerClassName).getDeclaredConstructor().newInstance();
             replayer.configure(testClassName, testMethodName, AnalysisForkMain.class.getClassLoader());
             // Reset the JaCoCo coverage
             RT.getAgent().reset();

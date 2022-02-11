@@ -1,6 +1,6 @@
 # Meringue
 
-Meringue is a Maven plugin that provides support for running and analyzing fuzzing campaigns.
+Meringue is a Maven plugin for running and analyzing fuzzing campaigns.
 
 ## Requirements
 

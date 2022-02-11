@@ -1,6 +1,4 @@
-package edu.neu.ccs.prl.meringue;
-
-import org.apache.maven.surefire.booter.SystemUtils;
+package edu.neu.ccs.prl.meringue.internal;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -11,62 +9,38 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
-public final class PluginUtil {
-    private PluginUtil() {
+public final class FileUtil {
+    private FileUtil() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
                 "not be instantiated");
     }
 
     /**
-     * Creates a Java Archive (JAR) file containing only a manifest that specifies values for the Main-Class and
-     * Class-Path attributes.
+     * Creates a Java Archive (JAR) file containing only a manifest that specifies a value for the Class-Path attribute.
      *
-     * @param classPathFiles set of files to be included on the class path
-     * @param mainClass      the class containing the entry point method or null if the Main-Class attribute should not
-     *                       be specified
-     * @param dir            the directory in which the JAR file should be created or null if the default temporary
-     *                       directory should be used
-     * @return the created JAR file
-     * @throws IOException          if an I/O error occurred
-     * @throws NullPointerException if classPathFiles is null or an element of classPathFiles is null
+     * @param classPathElements elements to be included on the class path
+     * @param jar               the JAR file that should be created
+     * @throws IOException          if an I/O error occurs
+     * @throws NullPointerException if {@code classPathElements} is null,
+     *                              an element of {@code classPathElements} is null, or {@code jar} is null.
      */
-    public static File buildManifestJar(Set<File> classPathFiles, Class<?> mainClass, File dir) throws IOException {
-        Set<File> classPathFilesCopy = new HashSet<>(classPathFiles);
+    public static void buildManifestJar(Collection<File> classPathElements, File jar) throws IOException {
+        Set<File> classPathFilesCopy = new HashSet<>(classPathElements);
         String[] paths = classPathFilesCopy.stream()
                 .map(f -> f.isFile() ? f.getAbsolutePath() : f.getAbsolutePath() + "/")
                 .toArray(String[]::new);
-        File result = File.createTempFile("manifest", ".jar", dir);
-        ensureDirectory(result.getParentFile());
+        ensureDirectory(jar.getParentFile());
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().putValue("Manifest-Version", "1.0");
         manifest.getMainAttributes().putValue("Class-Path", String.join(" ", paths));
-        if (mainClass != null) {
-            manifest.getMainAttributes().putValue("Main-Class", mainClass.getName());
-        }
-        JarOutputStream jos = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(result)), manifest);
+        JarOutputStream jos = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(jar)), manifest);
         jos.close();
-        return result;
-    }
-
-    public static List<File> collectFiles(File directory, String extension) throws IOException {
-        List<File> reports = new LinkedList<>();
-        Files.walkFileTree(directory.toPath(), new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-                if (hasExtension(file.toFile(), extension)) {
-                    reports.add(file.toFile());
-                }
-                return super.visitFile(file, attributes);
-            }
-        });
-        return reports;
     }
 
     public static File getClassPathElement(Class<?> clazz) {
@@ -77,35 +51,24 @@ public final class PluginUtil {
         return new File(javaHome, "bin" + File.separator + "java");
     }
 
+    /**
+     * Returns the home directory of the Java installation for the specified Java executable.
+     * pre-java 9 HOME/jre/bin/java or HOME/bin/java
+     *
+     * @param javaExec a Java executable
+     * @return the home directory of the Java installation for the specified Java executable
+     * @throws NullPointerException     if {@code javaExec} is null
+     * @throws IllegalArgumentException if {@code javaExec} does not point to a Java executable
+     */
     public static File javaExecToJavaHome(File javaExec) {
-        return SystemUtils.toJdkHomeFromJvmExec(javaExec.getPath());
-    }
-
-    public static boolean isInvalidJavaExecutable(File javaExec) {
-        if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath())) {
-            return true;
+        if ("java".equals(javaExec.getName())) {
+            File parent = javaExec.getParentFile();
+            if ("bin".equals(parent.getName())) {
+                File grandparent = parent.getParentFile();
+                return "jre".equals(grandparent.getName()) ? grandparent.getParentFile() : grandparent;
+            }
         }
-        if (javaExec.isFile()) {
-            return false;
-        } else {
-            return !"java".equals(javaExec.getName()) || !javaExec.getParentFile().isDirectory();
-        }
-    }
-
-    public static boolean hasExtension(File file, String targetExtension) {
-        return hasExtension(file) && targetExtension.equals(getExtension(file));
-    }
-
-    public static boolean hasExtension(File file) {
-        return file.isFile() && file.getName().contains(".");
-    }
-
-    public static String getExtension(File file) {
-        if (!hasExtension(file)) {
-            throw new IllegalArgumentException();
-        }
-        String name = file.getName();
-        return name.substring(name.lastIndexOf(".") + 1);
+        throw new IllegalArgumentException("Invalid Java executable " + javaExec);
     }
 
     /**
