@@ -35,6 +35,7 @@
         <module>meringue-zest-extension</module>
         <module>meringue-jazzer-extension</module>
         <module>meringue-maven-plugin</module>
+        <module>meringue-examples</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -223,6 +224,29 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-antrun-plugin</artifactId>
                     <version>1.8</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.1</version>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <!-- Exclude module descriptors -->
+                                    <exclude>module-info.class</exclude>
+                                    <!-- Exclude signature related files -->
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                        <minimizeJar>false</minimizeJar>
+                        <createSourcesJar>true</createSourcesJar>
+                        <shadeSourcesContent>true</shadeSourcesContent>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -16,6 +16,7 @@ public final class JazzerTarget {
 
     public static void fuzzerInitialize(String[] args) {
         try {
+            // TODO validate target's parameters (should be byte[] or FuzzedDataProvider
             target = new FuzzTarget(args[0], args[1], JazzerTarget.class.getClassLoader());
         } catch (Throwable t) {
             t.printStackTrace();
@@ -26,7 +27,8 @@ public final class JazzerTarget {
     public static void fuzzerTestOneInput(FuzzedDataProvider provider) throws Throwable {
         lastThrown = null;
         try {
-            target.execute(new Object[]{provider});
+            // TODO handle methods that take byte[] or FuzzedDataProvider argument
+            target.execute(new Object[]{provider.consumeRemainingAsBytes()});
         } catch (InvocationTargetException t) {
             lastThrown = t.getTargetException();
             if (rethrow) {

@@ -8,15 +8,16 @@ import java.util.Properties;
  * Classes implementing {@link FuzzFramework} must declare a public, zero-argument constructor.
  */
 public interface FuzzFramework {
-    void initialize(CampaignConfiguration config, Properties frameworkOptions);
+    void initialize(CampaignConfiguration config, Properties frameworkArguments)
+            throws IOException, ReflectiveOperationException;
 
     Process startCampaign() throws IOException;
 
-    File[] getCorpusFiles();
+    File[] getCorpusFiles() throws IOException;
 
-    File[] getFailureFiles();
+    File[] getFailureFiles() throws IOException;
 
-    Class<? extends Replayer> getReplayerClass();
+    Class<? extends Replayer> getReplayerClass() throws ReflectiveOperationException;
 
     File[] getFrameworkClassPathElements();
 }

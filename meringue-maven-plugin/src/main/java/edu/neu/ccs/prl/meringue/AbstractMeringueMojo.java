@@ -47,12 +47,12 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(property = "meringue.framework", readonly = true, required = true)
     private String framework;
     /**
-     * Configuration options that should be passed to the fuzzing framework.
+     * Arguments used to configure the fuzzing framework.
      */
     @Parameter(readonly = true)
-    private Properties frameworkOptions = new Properties();
+    private Properties frameworkArguments = new Properties();
     /**
-     * Java command line options that should be used for the test JVM.
+     * Java command line options that should be used for test JVMs.
      */
     @Parameter(property = "meringue.javaOptions")
     private List<String> javaOptions = new ArrayList<>();
@@ -78,7 +78,7 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         validateJavaExec();
         initializeOutputDir();
         return new CampaignConfiguration(testClass, testMethod, Duration.parse(duration), outputDir,
-                javaOptions, javaExec, createTestClassPathJar(), debug
+                javaOptions, createTestClassPathJar(), javaExec, debug
         );
     }
 
@@ -93,20 +93,10 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     FuzzFramework createFramework(CampaignConfiguration config) throws MojoExecutionException {
         try {
             FuzzFramework instance = (FuzzFramework) Class.forName(framework).getDeclaredConstructor().newInstance();
-            instance.initialize(config, frameworkOptions);
+            instance.initialize(config, frameworkArguments);
             return instance;
-        } catch (ClassCastException | ReflectiveOperationException e) {
+        } catch (ClassCastException | ReflectiveOperationException | IOException e) {
             throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
-        }
-    }
-
-    File createFrameworkClassPathJar(FuzzFramework framework) throws MojoExecutionException {
-        try {
-            File jar = new File(outputDir, "framework.jar");
-            FileUtil.buildManifestJar(Arrays.asList(framework.getFrameworkClassPathElements()), jar);
-            return jar;
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create framework class path JAR", e);
         }
     }
 
@@ -131,6 +121,16 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create test class path JAR", e);
+        }
+    }
+
+    File createFrameworkClassPathJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
+        try {
+            File jar = new File(outputDir, "framework.jar");
+            FileUtil.buildManifestJar(Arrays.asList(fuzzFramework.getFrameworkClassPathElements()), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create framework class path JAR", e);
         }
     }
 }

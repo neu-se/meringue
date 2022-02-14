@@ -17,7 +17,6 @@ public final class ZestForkMain {
         String testClassName = args[0];
         String testMethodName = args[1];
         File outputDir = new File(args[2]);
-        System.setProperty("jqf.ei.MAX_INPUT_SIZE", args[3]);
         Guidance guidance = new ZestGuidance(testClassName + "#" + testMethodName, null, outputDir);
         GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
     }

@@ -12,21 +12,31 @@ import java.util.Properties;
 public class ZestFramework implements FuzzFramework {
     private File outputDir;
     private File corpusDir;
-    private List<String> javaOptions;
     private File failuresDir;
-    private CampaignConfiguration config;
+    private JvmLauncher launcher;
 
     @Override
-    public void initialize(CampaignConfiguration config, Properties frameworkOptions) {
-        this.outputDir = config.getOutputDir();
-        this.config = config;
-        this.corpusDir = new File(outputDir, "corpus");
-        this.failuresDir = new File(outputDir, "failures");
-        this.javaOptions = new ArrayList<>(config.getJavaOptions());
+    public void initialize(CampaignConfiguration config, Properties frameworkArguments) {
+        outputDir = config.getOutputDir();
+        corpusDir = new File(outputDir, "corpus");
+        failuresDir = new File(outputDir, "failures");
+        List<String> javaOptions = new ArrayList<>(config.getJavaOptions());
         File instrumentJar = FileUtil.getClassPathElement(SnoopInstructionTransformer.class);
         File asmJar = FileUtil.getClassPathElement(ClassVisitor.class);
-        this.javaOptions.add(String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(), asmJar.getAbsolutePath()));
-        this.javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
+        javaOptions.add(String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(),
+                asmJar.getAbsolutePath()));
+        javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
+        javaOptions.add("-cp");
+        // TODO escape path
+        // TODO zest class path stuff
+        javaOptions.add(config.getTestClassPathJar().getAbsolutePath());
+        String[] arguments = new String[]{
+                config.getTestClassName(),
+                config.getTestMethodName(),
+                outputDir.getAbsolutePath()
+        };
+        launcher = new JvmLauncher.JavaMainLauncher(config.getJavaExec(), ZestForkMain.class.getName(),
+                javaOptions.toArray(new String[0]), true, arguments);
     }
 
     @Override
@@ -34,14 +44,7 @@ public class ZestFramework implements FuzzFramework {
         FileUtil.ensureDirectory(outputDir);
         FileUtil.createOrCleanDirectory(corpusDir);
         FileUtil.createOrCleanDirectory(failuresDir);
-        // TODO
-        //return ProcessUtil.launchJvm(config.getJavaExec(), config.getClassPathJar(),
-        //        javaOptions.toArray(new String[0]),
-        //        true,
-        //        config.getTestClassName(), config.getTestMethodName(), outputDir.getAbsolutePath(),
-        //        String.valueOf(config.getMaxLength())
-        //);
-        return null;
+        return launcher.launch();
     }
 
     @Override

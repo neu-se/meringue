@@ -17,6 +17,7 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Maven plugin that analyzes the results of a fuzzing campaign.
@@ -59,7 +60,6 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 getLog().info("No input files were found for analysis");
                 return;
             }
-
             CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
             JvmLauncher launcher = createLauncher(config, framework, filter);
             // Create a server socket bound to an automatically allocated port
@@ -73,26 +73,19 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                     throw new IOException("Error occurred in forked analysis process");
                 }
             }
-        } catch (IOException | InterruptedException | ClassNotFoundException e) {
+        } catch (IOException | InterruptedException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
         }
     }
 
     private JvmLauncher createLauncher(CampaignConfiguration config, FuzzFramework framework, CoverageFilter filter)
             throws MojoExecutionException {
-        File analysisJar = createAnalysisManifestJar(config, framework);
         List<String> options = new LinkedList<>(config.getJavaOptions());
         if (config.isDebug()) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
-        List<File> classPathElements = Arrays.asList(
-                analysisJar,
-                config.getTestClassPathJar(),
-                createFrameworkClassPathJar(framework)
-        );
-        classPathElements.add(analysisJar);
-        classPathElements.add(config.getTestClassPathJar());
-        String classPath = classPathElements.stream()
+        String classPath = Stream.of(createAnalysisManifestJar(config), config.getTestClassPathJar(),
+                        createFrameworkClassPathJar(framework))
                 .map(File::getAbsolutePath)
                 .map(SurefireHelper::escapeToPlatformPath)
                 .collect(Collectors.joining(File.pathSeparator));
@@ -110,13 +103,13 @@ public class AnalysisMojo extends AbstractMeringueMojo {
 
     public void analyze(CampaignConfiguration config, FuzzFramework framework, List<File> inputFiles,
                         ForkConnection connection)
-            throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ReflectiveOperationException {
         long firstTimestamp = inputFiles.isEmpty() ? 0 : inputFiles.get(0).lastModified();
         connection.send(config.getTestClassName());
         connection.send(config.getTestMethodName());
         connection.send(framework.getReplayerClass().getName());
-        connection.send(inputFiles);
         connection.send(maxTraceSize);
+        connection.send(inputFiles.toArray(new File[0]));
         int i = 0;
         for (File inputFile : inputFiles) {
             long time = inputFile.lastModified() - firstTimestamp;
@@ -129,29 +122,26 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 System.out.printf("Analyzed %d/%d input files%n", i + 1, inputFiles.size());
             }
             i++;
-            // Send the shutdown signal
-            connection.send(null);
         }
+        // Send the shutdown signal
+        connection.send(null);
     }
 
-    private static File createAnalysisManifestJar(CampaignConfiguration config, FuzzFramework framework)
+    private static File createAnalysisManifestJar(CampaignConfiguration config)
             throws MojoExecutionException {
-        List<File> classPathElements = Arrays.asList(
-                FileUtil.getClassPathElement(AnalysisForkMain.class),
-                FileUtil.getClassPathElement(PreMain.class),
-                FileUtil.getClassPathElement(Analyzer.class)
-        );
-        classPathElements.addAll(Arrays.asList(framework.getFrameworkClassPathElements()));
         try {
             File jar = new File(config.getOutputDir(), "analysis.jar");
-            FileUtil.buildManifestJar(classPathElements, jar);
+            FileUtil.buildManifestJar(Arrays.asList(
+                    FileUtil.getClassPathElement(AnalysisForkMain.class),
+                    FileUtil.getClassPathElement(PreMain.class),
+                    FileUtil.getClassPathElement(Analyzer.class)), jar);
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
         }
     }
 
-    private static List<File> collectInputFiles(FuzzFramework framework) {
+    private static List<File> collectInputFiles(FuzzFramework framework) throws IOException {
         List<File> files = new LinkedList<>(Arrays.asList(framework.getCorpusFiles()));
         files.addAll(Arrays.asList(framework.getFailureFiles()));
         files.sort(Comparator.comparingLong(File::lastModified));

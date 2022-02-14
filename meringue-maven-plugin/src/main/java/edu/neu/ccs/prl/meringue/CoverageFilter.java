@@ -1,5 +1,7 @@
 package edu.neu.ccs.prl.meringue;
 
+import org.jacoco.agent.rt.internal_3570298.PreMain;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -50,7 +52,7 @@ public final class CoverageFilter {
     }
 
     public String getJacocoOption() {
-        String opt = "-javaagent:%s=output=none";
+        String opt = String.format("-javaagent:%s=output=none", FileUtil.getClassPathElement(PreMain.class));
         if (!exclusions.isEmpty()) {
             opt += ",excludes=" + String.join(":", exclusions);
         }

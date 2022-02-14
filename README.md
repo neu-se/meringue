@@ -7,13 +7,31 @@ Meringue is a Maven plugin for running and analyzing fuzzing campaigns.
 * Java Development Kit 8
 * [Apache Maven](https://maven.apache.org/) 3.6.0+
 
-## Building
+## Building Meringue
 
 1. Ensure that some version of OpenJDK 8 is installed.
 2. Set the JAVA_HOME environmental variable to the path to this installation. For example, on Mac,
    run `export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_222-openjdk/Contents/Home/`.
 3. Clone or download this repository.
 4. In the root directory for this project, run `mvn -DskipTests install`.
+
+## Running Examples
+
+The following instructions assume that you have already built Meringue according to the above instructions. To run an
+example fuzzing campaign run:
+
+```
+mvn -fmeringue-example -P<FRAMEWORK>,<SUBJECT> [-Dmeringue.duration=<X>] [-Dmeringue.debug] verify
+```
+
+Where:
+
+* \<FRAMEWORK/> is one of the following: "zest" or "jazzer"
+* \<SUBJECT\> is one of the following: "ant", "maven", "bcel", "closure", or "rhino"
+* \<X\> is the maximum amount of time to execute the fuzzing campaign for specified in the ISO-8601 duration format (
+  e.g., 2 days, 3 hours and 4 minutes is "P2DT3H4M"). The default value is one day.
+* The presence of -Dmeringue.debug indicates that forked test JVMs should suspend and wait for a debugger to attach.
+* By default, forked test JVMs do not suspend and wait for a debugger to attach.
 
 ## License
 
