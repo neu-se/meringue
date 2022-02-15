@@ -5,18 +5,17 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.surefire.booter.SystemUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.stream.Collectors;
 
 abstract class AbstractMeringueMojo extends AbstractMojo {
     /**
-     * The current Maven project.
+     * Current Maven project.
      */
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -26,69 +25,64 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(property = "meringue.outputDir", defaultValue = "${project.build.directory}/meringue")
     private File outputDir;
     /**
-     * The non-empty, non-null, fully-qualified name of the test class.
+     * Fully-qualified name of the test class.
      *
      * @see Class#forName(String className)
      */
     @Parameter(property = "meringue.testClass", required = true)
     private String testClass;
     /**
-     * The non-empty, non-null name of the test method.
+     * Name of the test method.
      */
     @Parameter(property = "meringue.testMethod", required = true)
     private String testMethod;
     /**
-     * The Java executable that should be used.
-     * If not specified, the executable used to run Maven will be used.
+     * Java executable that should be used. If not specified, the executable used to run Maven will be used.
      */
     @Parameter(property = "meringue.javaExec")
-    private File javaExec = PluginUtil.javaHomeToJavaExec(new File(System.getProperty("java.home")));
+    private File javaExec = FileUtil.javaHomeToJavaExec(new File(System.getProperty("java.home")));
     /**
-     * The non-empty, non-null, fully-qualified name of the fuzzing framework that should be used.
+     * Fully-qualified name of the fuzzing framework that should be used.
      */
     @Parameter(property = "meringue.framework", readonly = true, required = true)
     private String framework;
     /**
-     * Configuration options that should be passed to the fuzzing framework.
+     * Arguments used to configure the fuzzing framework.
      */
     @Parameter(readonly = true)
-    private Properties options = new Properties();
+    private Properties frameworkArguments = new Properties();
+    /**
+     * Java command line options that should be used for test JVMs.
+     */
+    @Parameter(property = "meringue.javaOptions")
+    private List<String> javaOptions = new ArrayList<>();
+    /**
+     * Textual representation of the maximum amount of time to execute the fuzzing campaign in the ISO-8601 duration
+     * format. The default value is one day.
+     * <p>
+     * See {@link java.time.Duration#parse(CharSequence)}.
+     */
+    @Parameter(property = "meringue.duration", defaultValue = "P1D")
+    private String duration;
+    /**
+     * True if test JVMs should suspend and wait for a debugger to attach.
+     */
+    @Parameter(property = "meringue.debug", defaultValue = "false")
+    private boolean debug;
 
-    File getOutputDir() {
-        return outputDir;
+    String getTestDescription() {
+        return testClass + "#" + testMethod;
     }
 
-    String getTestClass() {
-        return testClass;
+    CampaignConfiguration createConfiguration() throws MojoExecutionException {
+        validateJavaExec();
+        initializeOutputDir();
+        return new CampaignConfiguration(testClass, testMethod, Duration.parse(duration), outputDir,
+                javaOptions, createTestClassPathJar(), javaExec, debug
+        );
     }
 
-    String getTestMethod() {
-        return testMethod;
-    }
-
-    Properties getOptions() {
-        return options;
-    }
-
-    File getJavaExec() throws MojoExecutionException {
-        if (PluginUtil.isInvalidJavaExecutable(javaExec)) {
-            throw new MojoExecutionException("Invalid Java executable: " + javaExec);
-        }
-        return javaExec;
-    }
-
-    CampaignConfiguration createConfiguration(Class<?> mainClass, File... additionalClasspathElements)
-            throws MojoExecutionException {
-        try {
-            PluginUtil.ensureDirectory(getOutputDir());
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create output directory", e);
-        }
-        File manifestJar = createManifestJar(mainClass, additionalClasspathElements);
-        return new CampaignConfiguration(getOutputDir(), getTestClass(), getTestMethod(), getJavaExec(), manifestJar);
-    }
-
-    Set<File> getTestClasspathFiles() throws MojoExecutionException {
+    Set<File> getTestClasspathElements() throws MojoExecutionException {
         try {
             return project.getTestClasspathElements().stream().map(File::new).collect(Collectors.toSet());
         } catch (DependencyResolutionRequiredException e) {
@@ -96,30 +90,47 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
-    File createManifestJar(Class<?> mainClass, File... additionalClasspathElements)
-            throws MojoExecutionException {
+    FuzzFramework createFramework(CampaignConfiguration config) throws MojoExecutionException {
         try {
-            Set<File> classpathFiles = new HashSet<>(getTestClasspathFiles());
-            classpathFiles.addAll(Arrays.asList(additionalClasspathElements));
-            classpathFiles.add(PluginUtil.getClassPathElement(mainClass));
-            File jar = PluginUtil.buildManifestJar(classpathFiles, mainClass, outputDir);
-            jar.deleteOnExit();
-            return jar;
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create manifest jar", e);
+            FuzzFramework instance = (FuzzFramework) Class.forName(framework).getDeclaredConstructor().newInstance();
+            instance.initialize(config, frameworkArguments);
+            return instance;
+        } catch (ClassCastException | ReflectiveOperationException | IOException e) {
+            throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
         }
     }
 
-    String getTestDescription() {
-        return testClass + "#" + testMethod;
+    private void validateJavaExec() throws MojoExecutionException {
+        if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath()) || !javaExec.isFile()) {
+            throw new MojoExecutionException("Invalid Java executable: " + javaExec);
+        }
     }
 
-    FuzzFramework createFramework() throws MojoExecutionException {
+    private void initializeOutputDir() throws MojoExecutionException {
         try {
-            Class<?> clazz = Class.forName(framework);
-            return (FuzzFramework) clazz.newInstance();
-        } catch (ClassCastException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
+            FileUtil.ensureDirectory(outputDir);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create output directory", e);
+        }
+    }
+
+    private File createTestClassPathJar() throws MojoExecutionException {
+        try {
+            File jar = new File(outputDir, "test.jar");
+            FileUtil.buildManifestJar(getTestClasspathElements(), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create test class path JAR", e);
+        }
+    }
+
+    File createFrameworkClassPathJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
+        try {
+            File jar = new File(outputDir, "framework.jar");
+            FileUtil.buildManifestJar(Arrays.asList(fuzzFramework.getFrameworkClassPathElements()), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create framework class path JAR", e);
         }
     }
 }
