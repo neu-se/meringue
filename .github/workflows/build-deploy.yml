@@ -14,7 +14,7 @@ jobs:
     env:
       JAVA_HOME: /usr/lib/jvm/jdk1.8.0_301/
     needs: build-test
-    if: github.ref == 'refs/heads/main' # only run deploy on main branch
+    # if: github.ref == 'refs/heads/main' # only run deploy on main branch
     steps:
       - uses: actions/checkout@v2
       - name: deploy

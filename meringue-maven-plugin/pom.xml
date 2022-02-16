@@ -98,6 +98,9 @@
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>
                             </gpgArguments>
+                            <homedir>
+                                .github/deployment/
+                            </homedir>
                         </configuration>
                     </plugin>
                 </plugins>
