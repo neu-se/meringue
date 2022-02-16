@@ -27,18 +27,22 @@ public final class JazzerFramework implements FuzzFramework {
         String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator
                 + FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
         command.add("--cp=" + classPath);
-        command.add("--target_class=" + JazzerTarget.class.getName());
+        command.add("--target_class=" + JazzerTargetWrapper.class.getName());
         command.add("--keep_going=" + Integer.MAX_VALUE);
         command.add("--reproducer_path=" + reproducerDir.getAbsolutePath());
         command.add("--target_args=" + config.getTestClassName() + " " + config.getTestMethodName());
         if (!config.getJavaOptions().isEmpty()) {
             command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
         }
-        command.add("-rss_limit_mb=0");
         String argLine = frameworkArguments.getProperty("argLine");
-        if (argLine != null) {
-            command.add(argLine);
+        if (argLine != null && !argLine.isEmpty()) {
+            for (String s : argLine.split("\\s")) {
+                if (!s.isEmpty()) {
+                    command.add(s);
+                }
+            }
         }
+        command.add("-rss_limit_mb=0");
         command.add(corpusDir.getAbsolutePath());
         builder = new ProcessBuilder().command(command).directory(workingDir);
         builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExec()).getAbsolutePath());
@@ -71,10 +75,8 @@ public final class JazzerFramework implements FuzzFramework {
     }
 
     @Override
-    public File[] getFrameworkClassPathElements() {
-        return new File[]{
-                FileUtil.getClassPathElement(JazzerFramework.class),
-        };
+    public Collection<File> getRequiredClassPathElements() {
+        return Collections.singleton(FileUtil.getClassPathElement(JazzerFramework.class));
     }
 
     private static File getJazzerExecutable(File outputDir) throws IOException {

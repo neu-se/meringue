@@ -39,10 +39,10 @@ public final class CoverageFilter {
         }
     }
 
-    public CoverageCalculator createCoverageCalculator(Collection<File> classpathFiles) throws IOException {
+    public CoverageCalculator createCoverageCalculator(Collection<File> classPathElements) throws IOException {
         try {
             return new CoverageCalculator(
-                    includedClasspathElements.isEmpty() ? new HashSet<>(classpathFiles) : includedClasspathElements,
+                    includedClasspathElements.isEmpty() ? new HashSet<>(classPathElements) : includedClasspathElements,
                     inclusions.isEmpty() ? "*" : String.join(":", inclusions),
                     String.join(":", exclusions)
             );

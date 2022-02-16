@@ -53,13 +53,9 @@ public final class CampaignConfiguration implements Serializable {
      * Non-null, contains no null elements, unmodifiable.
      */
     private final List<String> javaOptions;
-    /**
-     * True if test JVMs should suspend and wait for a debugger to attach.
-     */
-    private final boolean debug;
 
     public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
-                                 List<String> javaOptions, File testClassPathJar, File javaExec, boolean debug) {
+                                 List<String> javaOptions, File testClassPathJar, File javaExec) {
         if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative()
                 || !outputDir.isDirectory() || !testClassPathJar.isFile() || !javaExec.isFile()) {
             throw new IllegalArgumentException();
@@ -76,7 +72,6 @@ public final class CampaignConfiguration implements Serializable {
         }
         this.testClassPathJar = testClassPathJar;
         this.javaExec = javaExec;
-        this.debug = debug;
     }
 
     public Duration getDuration() {
@@ -105,9 +100,5 @@ public final class CampaignConfiguration implements Serializable {
 
     public File getJavaExec() {
         return javaExec;
-    }
-
-    public boolean isDebug() {
-        return debug;
     }
 }

@@ -23,13 +23,13 @@ class CoverageCalculator {
     private final WildcardMatcher excludes;
     private long totalBranches = 0;
 
-    public CoverageCalculator(Collection<File> classpathFiles, String includes, String excludes) throws IOException {
+    public CoverageCalculator(Collection<File> classPathElements, String includes, String excludes) throws IOException {
         this.includes = new WildcardMatcher(toVMName(includes));
         this.excludes = new WildcardMatcher(toVMName(excludes));
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new RecordingAnalyzer(new ExecutionDataStore(), builder);
-        for (File classpathFile : classpathFiles) {
-            analyzer.analyzeAll(classpathFile);
+        for (File classpathElement : classPathElements) {
+            analyzer.analyzeAll(classpathElement);
         }
         for (IClassCoverage classCoverage : builder.getClasses()) {
             if (filter(classCoverage.getName())) {

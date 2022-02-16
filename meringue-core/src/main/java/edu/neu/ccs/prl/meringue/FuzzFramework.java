@@ -2,6 +2,7 @@ package edu.neu.ccs.prl.meringue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Properties;
 
 /**
@@ -19,5 +20,5 @@ public interface FuzzFramework {
 
     Class<? extends Replayer> getReplayerClass() throws ReflectiveOperationException;
 
-    File[] getFrameworkClassPathElements();
+    Collection<File> getRequiredClassPathElements();
 }

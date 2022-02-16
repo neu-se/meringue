@@ -18,9 +18,10 @@ public class FuzzingMojo extends AbstractMeringueMojo {
     public void execute() throws MojoExecutionException {
         try {
             getLog().info("Running fuzzing campaign: " + getTestDescription());
+            FileUtil.createOrCleanDirectory(getOutputDir());
             CampaignConfiguration config = createConfiguration();
             Process process = createFramework(config).startCampaign();
-            if (ProcessUtil.waitFor(process, config.getDuration().toMillis(), TimeUnit.MILLISECONDS)) {
+            if (ProcessUtil.waitFor(process, getDuration().toMillis(), TimeUnit.MILLISECONDS)) {
                 throw new IOException("Campaign process terminated unexpectedly");
             }
         } catch (IOException | InterruptedException e) {

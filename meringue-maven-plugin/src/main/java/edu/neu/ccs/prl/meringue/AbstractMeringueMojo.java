@@ -3,15 +3,19 @@ package edu.neu.ccs.prl.meringue;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.surefire.booter.SystemUtils;
+import org.jacoco.agent.rt.internal_3570298.PreMain;
+import org.jacoco.core.analysis.Analyzer;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 abstract class AbstractMeringueMojo extends AbstractMojo {
     /**
@@ -64,11 +68,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
      */
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
-    /**
-     * True if test JVMs should suspend and wait for a debugger to attach.
-     */
-    @Parameter(property = "meringue.debug", defaultValue = "false")
-    private boolean debug;
+
+
+    Duration getDuration() {
+        return Duration.parse(duration);
+    }
 
     String getTestDescription() {
         return testClass + "#" + testMethod;
@@ -77,12 +81,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     CampaignConfiguration createConfiguration() throws MojoExecutionException {
         validateJavaExec();
         initializeOutputDir();
-        return new CampaignConfiguration(testClass, testMethod, Duration.parse(duration), outputDir,
-                javaOptions, createTestClassPathJar(), javaExec, debug
-        );
+        return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(),
+                javaOptions, createTestJar(), javaExec);
     }
 
-    Set<File> getTestClasspathElements() throws MojoExecutionException {
+    Set<File> getTestClassPathElements() throws MojoExecutionException {
         try {
             return project.getTestClasspathElements().stream().map(File::new).collect(Collectors.toSet());
         } catch (DependencyResolutionRequiredException e) {
@@ -106,31 +109,65 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
+    File getLibraryDirectory() {
+        return new File(outputDir, "lib");
+    }
+
     private void initializeOutputDir() throws MojoExecutionException {
         try {
             FileUtil.ensureDirectory(outputDir);
+            FileUtil.ensureDirectory(getLibraryDirectory());
+            FileUtil.ensureDirectory(getCampaignDirectory());
         } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create output directory", e);
+            throw new MojoExecutionException("Failed to initialize output directory", e);
         }
     }
 
-    private File createTestClassPathJar() throws MojoExecutionException {
+    private File getCampaignDirectory() {
+        return new File(outputDir, "campaign");
+    }
+
+    private File createTestJar() throws MojoExecutionException {
         try {
-            File jar = new File(outputDir, "test.jar");
-            FileUtil.buildManifestJar(getTestClasspathElements(), jar);
+            File jar = new File(getLibraryDirectory(), "test.jar");
+            FileUtil.buildManifestJar(getTestClassPathElements(), jar);
             return jar;
         } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create test class path JAR", e);
+            throw new MojoExecutionException("Failed to create test manifest JAR", e);
         }
     }
 
-    File createFrameworkClassPathJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
+    File createFrameworkJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
         try {
-            File jar = new File(outputDir, "framework.jar");
-            FileUtil.buildManifestJar(Arrays.asList(fuzzFramework.getFrameworkClassPathElements()), jar);
+            File jar = new File(getLibraryDirectory(), "framework.jar");
+            FileUtil.buildManifestJar(fuzzFramework.getRequiredClassPathElements(), jar);
             return jar;
         } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create framework class path JAR", e);
+            throw new MojoExecutionException("Failed to create framework manifest JAR", e);
         }
+    }
+
+    File createAnalysisJar() throws MojoExecutionException {
+        try {
+            File jar = new File(getLibraryDirectory(), "analysis.jar");
+            FileUtil.buildManifestJar(Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class)
+                    .map(FileUtil::getClassPathElement).collect(Collectors.toList()), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
+        }
+    }
+
+    File getOutputDir() {
+        return outputDir;
+    }
+
+    String buildClassPath(File classPathElement, File... remainingClassPathElements) {
+        List<File> elements = new LinkedList<>(Arrays.asList(remainingClassPathElements));
+        elements.add(classPathElement);
+        return elements.stream()
+                .map(File::getAbsolutePath)
+                .map(SurefireHelper::escapeToPlatformPath)
+                .collect(Collectors.joining(File.pathSeparator));
     }
 }

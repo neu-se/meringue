@@ -3,45 +3,56 @@ package edu.neu.ccs.prl.meringue;
 import org.apache.maven.plugin.logging.Log;
 
 import java.io.*;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-public final class CampaignReport {
+final class CampaignReport {
+    private final Map<List<StackTraceElement>, List<File>> failureMap = new HashMap<>();
     private final long totalBranches;
-    private final long[] times;
-    private final long[] branchCoverageValues;
-    private final Set<List<StackTraceElement>> uniqueTraces;
+    private final List<long[]> rows = new ArrayList<>();
 
-    CampaignReport(long totalBranches, long[] times, long[] branchCoverageValues,
-                   Set<List<StackTraceElement>> uniqueTraces) {
+    public CampaignReport(long totalBranches) {
         this.totalBranches = totalBranches;
-        this.times = times;
-        this.branchCoverageValues = branchCoverageValues;
-        this.uniqueTraces = uniqueTraces;
+    }
+
+    public void recordCoverage(long time, long coveredBranches) {
+        rows.add(new long[]{time, coveredBranches});
+    }
+
+    public void recordFailure(File inputFile, StackTraceElement[] trace) {
+        List<StackTraceElement> elements = Arrays.asList(trace);
+        if (!failureMap.containsKey(elements)) {
+            failureMap.put(elements, new ArrayList<>());
+        }
+        failureMap.get(elements).add(inputFile);
     }
 
     public void print(Log log) {
-        long last = branchCoverageValues.length > 0 ? branchCoverageValues[branchCoverageValues.length - 1] : 0;
-        long total = totalBranches;
-        log.info(String.format("Hit branches: %d/%d = %.7f", last, total, (1.0 * last) / total));
-        for (List<StackTraceElement> uniqueTrace : uniqueTraces) {
-            Throwable t = new Throwable();
-            t.setStackTrace(uniqueTrace.toArray(new StackTraceElement[0]));
-            t.printStackTrace();
+        if (!rows.isEmpty()) {
+            long finalCoverage = rows.get(rows.size() - 1)[1];
+            long total = totalBranches;
+            log.info(String.format("Hit branches: %d/%d = %.7f", finalCoverage, total, (1.0 * finalCoverage) / total));
+            for (List<StackTraceElement> uniqueTrace : failureMap.keySet()) {
+                Throwable t = new Throwable();
+                t.setStackTrace(uniqueTrace.toArray(new StackTraceElement[0]));
+                t.printStackTrace();
+            }
         }
     }
 
     public void write(File coverageReportFile, File failuresReportFile) throws FileNotFoundException {
         try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(coverageReportFile)))) {
-            out.printf("time, branches (out of %d)%n", totalBranches);
-            for (int i = 0; i < times.length; i++) {
-                out.printf("%d, %d%n", times[i], branchCoverageValues[i]);
+            out.printf("time, covered_branches (out of %d)%n", totalBranches);
+            for (long[] row : rows) {
+                out.printf("%d, %d%n", row[0], row[1]);
             }
         }
         try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(failuresReportFile)))) {
             int i = 1;
-            for (List<StackTraceElement> uniqueTrace : uniqueTraces) {
+            for (List<StackTraceElement> uniqueTrace : failureMap.keySet()) {
                 out.printf("%d. %s%n", i++, uniqueTrace);
+                for (File inputFile : failureMap.get(uniqueTrace)) {
+                    out.printf("\t%s%n", inputFile.toString());
+                }
             }
         }
     }

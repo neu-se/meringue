@@ -41,6 +41,36 @@
             <version>v20180204</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>edu.berkeley.cs.jqf</groupId>
+            <artifactId>jqf-fuzz</artifactId>
+            <version>1.7</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>org.jacoco.report</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>org.jacoco.core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>edu.berkeley.cs.jqf</groupId>
+            <artifactId>jqf-examples</artifactId>
+            <version>1.7</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>org.jacoco.report</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>org.jacoco.core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -82,6 +112,17 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <profiles>
@@ -90,13 +131,6 @@
             <build>
                 <plugins>
                     <plugin>
-                        <dependencies>
-                            <dependency>
-                                <groupId>edu.neu.ccs.prl.meringue</groupId>
-                                <artifactId>meringue-zest-extension</artifactId>
-                                <version>1.0.0-SNAPSHOT</version>
-                            </dependency>
-                        </dependencies>
                         <executions>
                             <execution>
                                 <id>execute</id>
@@ -110,6 +144,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <framework>edu.neu.ccs.prl.meringue.ZestFramework</framework>
                             <javaOptions>
                                 <option>-Djqf.ei.MAX_INPUT_SIZE=10240</option>
@@ -127,13 +162,6 @@
             <build>
                 <plugins>
                     <plugin>
-                        <dependencies>
-                            <dependency>
-                                <groupId>edu.neu.ccs.prl.meringue</groupId>
-                                <artifactId>meringue-jazzer-extension</artifactId>
-                                <version>1.0.0-SNAPSHOT</version>
-                            </dependency>
-                        </dependencies>
                         <executions>
                             <execution>
                                 <id>execute</id>
@@ -147,10 +175,13 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>test</testMethod>
                             <framework>edu.neu.ccs.prl.meringue.JazzerFramework</framework>
                             <frameworkArguments>
                                 <argLine>
-                                    -max_len=10240 --instrumentation_excludes=org.mozilla.javascript.gen** -use_value_profile=1
+                                    --instrumentation_excludes=org.mozilla.javascript.gen.**
+                                    -max_len=10240
+                                    -use_value_profile=1
                                 </argLine>
                             </frameworkArguments>
                             <javaOptions>
@@ -179,7 +210,6 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <testClass>edu.neu.ccs.prl.meringue.RhinoTest</testClass>
-                            <testMethod>compile</testMethod>
                             <includedClassPathElements>
                                 <includedClassPathElement>
                                     ${org.mozilla:rhino:jar}
@@ -207,7 +237,6 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <testClass>edu.neu.ccs.prl.meringue.AntTest</testClass>
-                            <testMethod>parse</testMethod>
                             <includedClassPathElements>
                                 <includedClassPathElement>${org.apache.ant:ant:jar}</includedClassPathElement>
                             </includedClassPathElements>
@@ -233,7 +262,6 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <testClass>edu.neu.ccs.prl.meringue.BcelTest</testClass>
-                            <testMethod>parseAndVerify</testMethod>
                             <includedClassPathElements>
                                 <includedClassPathElement>${org.apache.bcel:bcel:jar}</includedClassPathElement>
                             </includedClassPathElements>
@@ -259,7 +287,6 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <testClass>edu.neu.ccs.prl.meringue.ClosureTest</testClass>
-                            <testMethod>compile</testMethod>
                             <includedClassPathElements>
                                 <includedClassPathElement>
                                     ${com.google.javascript:closure-compiler:jar}
@@ -287,7 +314,6 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <testClass>edu.neu.ccs.prl.meringue.MavenTest</testClass>
-                            <testMethod>readModel</testMethod>
                             <includedClassPathElements>
                                 <includedClassPathElement>
                                     ${org.apache.maven:maven-model:jar}

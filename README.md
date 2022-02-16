@@ -30,8 +30,8 @@ Where:
 * \<SUBJECT\> is one of the following: "ant", "maven", "bcel", "closure", or "rhino"
 * \<X\> is the maximum amount of time to execute the fuzzing campaign for specified in the ISO-8601 duration format (
   e.g., 2 days, 3 hours and 4 minutes is "P2DT3H4M"). The default value is one day.
-* The presence of -Dmeringue.debug indicates that forked test JVMs should suspend and wait for a debugger to attach.
-* By default, forked test JVMs do not suspend and wait for a debugger to attach.
+* The presence of -Dmeringue.debug indicates that forked analysis JVMs should suspend and wait for a debugger to attach.
+* By default, forked analysis JVMs do not suspend and wait for a debugger to attach.
 
 ## License
 

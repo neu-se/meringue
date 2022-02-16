@@ -6,8 +6,11 @@ import org.objectweb.asm.ClassVisitor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ZestFramework implements FuzzFramework {
     private File outputDir;
@@ -27,9 +30,10 @@ public class ZestFramework implements FuzzFramework {
                 asmJar.getAbsolutePath()));
         javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
         javaOptions.add("-cp");
-        // TODO escape path
-        // TODO zest class path stuff
-        javaOptions.add(config.getTestClassPathJar().getAbsolutePath());
+        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
+                FileUtil.getClassPathElement(ZestFramework.class).getAbsolutePath() + File.pathSeparator +
+                FileUtil.getClassPathElement(FuzzFramework.class).getAbsolutePath();
+        javaOptions.add(classPath);
         String[] arguments = new String[]{
                 config.getTestClassName(),
                 config.getTestMethodName(),
@@ -63,7 +67,9 @@ public class ZestFramework implements FuzzFramework {
     }
 
     @Override
-    public File[] getFrameworkClassPathElements() {
-        return new File[0];
+    public Collection<File> getRequiredClassPathElements() {
+        return Stream.of(ZestFramework.class, FuzzFramework.class)
+                .map(FileUtil::getClassPathElement)
+                .collect(Collectors.toList());
     }
 }
