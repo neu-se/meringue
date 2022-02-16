@@ -10,7 +10,7 @@ jobs:
       - name: Build and install with maven
         run: mvn install
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       JAVA_HOME: /usr/lib/jvm/jdk1.8.0_301/
     needs: build-test
