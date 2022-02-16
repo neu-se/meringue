@@ -17,6 +17,10 @@ jobs:
     # if: github.ref == 'refs/heads/main' # only run deploy on main branch
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-java@v2
+          with:
+            distribution: 'adopt' 
+            java-version: '8'
       - name: deploy
         env: 
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
