@@ -26,7 +26,7 @@ mvn -fmeringue-example -P<FRAMEWORK>,<SUBJECT> [-Dmeringue.duration=<X>] [-Dmeri
 
 Where:
 
-* \<FRAMEWORK/> is one of the following: "zest" or "jazzer"
+* \<FRAMEWORK\> is one of the following: "zest" or "jazzer"
 * \<SUBJECT\> is one of the following: "ant", "maven", "bcel", "closure", or "rhino"
 * \<X\> is the maximum amount of time to execute the fuzzing campaign for specified in the ISO-8601 duration format (
   e.g., 2 days, 3 hours and 4 minutes is "P2DT3H4M"). The default value is one day.
