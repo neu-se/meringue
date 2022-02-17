@@ -95,6 +95,11 @@
             </dependency>
             <dependency>
                 <groupId>org.jacoco</groupId>
+                <artifactId>org.jacoco.report</artifactId>
+                <version>0.8.7</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
                 <artifactId>org.jacoco.agent</artifactId>
                 <version>0.8.7</version>
                 <classifier>runtime</classifier>

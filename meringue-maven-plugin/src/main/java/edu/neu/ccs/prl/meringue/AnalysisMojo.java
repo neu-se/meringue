@@ -48,6 +48,11 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      */
     @Parameter(property = "meringue.debug", defaultValue = "false")
     private boolean debug;
+    /**
+     * Directory containing source code archives and directories.
+     */
+    @Parameter(property = "meringue.sources")
+    private File sources;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -68,9 +73,10 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 Process process = launcher.launch(new String[]{String.valueOf(server.getLocalPort())});
                 CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
                 CampaignReport report = new CampaignReport(calculator.getTotalBranches());
+                byte[] execData;
                 try (ForkConnection connection = new ForkConnection(server.accept())) {
                     configureFork(config, framework, inputFiles, connection);
-                    analyze(inputFiles, connection, report, calculator);
+                    execData = analyze(inputFiles, connection, report, calculator);
                 }
                 if (ProcessUtil.waitFor(process) != 0) {
                     throw new IOException("Error occurred in forked analysis process");
@@ -78,9 +84,19 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 report.print(getLog());
                 File coverageReportFile = new File(getOutputDir(), "coverage.csv");
                 File failuresReportFile = new File(getOutputDir(), "failures.txt");
+                File reportDir = new File(getOutputDir(), "final-report");
                 getLog().info("Writing coverage report to: " + coverageReportFile);
                 getLog().info("Writing failures report to: " + failuresReportFile);
                 report.write(coverageReportFile, failuresReportFile);
+                if (sources != null && !sources.isDirectory()) {
+                    getLog().warn("Invalid sources directory: " + sources);
+                    sources = null;
+                }
+                if (execData != null) {
+                    getLog().info("Writing JaCoCo report to: " + reportDir);
+                    calculator.createHtmlReport(execData, getTestDescription(),
+                            sources, reportDir);
+                }
             }
         } catch (IOException | InterruptedException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
@@ -114,28 +130,30 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         connection.send(inputFiles.toArray(new File[0]));
     }
 
-    private void analyze(List<File> inputFiles, ForkConnection connection, CampaignReport report,
-                         CoverageCalculator calculator) throws IOException, InterruptedException,
+    private byte[] analyze(List<File> inputFiles, ForkConnection connection, CampaignReport report,
+                           CoverageCalculator calculator) throws IOException, InterruptedException,
             ReflectiveOperationException {
         long firstTimestamp = inputFiles.isEmpty() ? 0 : inputFiles.get(0).lastModified();
         int i = 0;
+        byte[] result = null;
         for (File inputFile : inputFiles) {
             long time = inputFile.lastModified() - firstTimestamp;
             byte[] execData = connection.receive(byte[].class);
+            result = execData;
             report.recordCoverage(time, calculator.calculate(execData));
             if (connection.receive(Boolean.class)) {
                 StackTraceElement[] trace = connection.receive(StackTraceElement[].class);
                 report.recordFailure(inputFile, trace);
             }
-            if ((i + 1) % 100 == 0) {
+            i++;
+            if (i % 100 == 0) {
                 System.out.printf("Analyzed %d/%d input files%n", i + 1, inputFiles.size());
             }
-            i++;
         }
         // Send the shutdown signal
         connection.send(null);
+        return result;
     }
-
 
     private static List<File> collectInputFiles(FuzzFramework framework) throws IOException {
         List<File> files = new LinkedList<>(Arrays.asList(framework.getCorpusFiles()));

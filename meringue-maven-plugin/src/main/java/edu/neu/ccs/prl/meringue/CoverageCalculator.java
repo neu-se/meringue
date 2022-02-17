@@ -10,12 +10,20 @@ import org.jacoco.core.internal.data.CRC64;
 import org.jacoco.core.internal.instr.InstrSupport;
 import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
+import org.jacoco.report.DirectorySourceFileLocator;
+import org.jacoco.report.FileMultiReportOutput;
+import org.jacoco.report.IReportVisitor;
+import org.jacoco.report.MultiSourceFileLocator;
+import org.jacoco.report.html.HTMLFormatter;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 class CoverageCalculator {
     private final Map<Long, byte[]> idBufferMap = new HashMap<>();
@@ -23,7 +31,7 @@ class CoverageCalculator {
     private final WildcardMatcher excludes;
     private long totalBranches = 0;
 
-    public CoverageCalculator(Collection<File> classPathElements, String includes, String excludes) throws IOException {
+    CoverageCalculator(Collection<File> classPathElements, String includes, String excludes) throws IOException {
         this.includes = new WildcardMatcher(toVMName(includes));
         this.excludes = new WildcardMatcher(toVMName(excludes));
         CoverageBuilder builder = new CoverageBuilder();
@@ -63,8 +71,60 @@ class CoverageCalculator {
         return hitBranches;
     }
 
+    public void createHtmlReport(byte[] execData, String testDesc, File sourcesDir, File reportDir)
+            throws IOException {
+        ExecFileLoader loader = new ExecFileLoader();
+        loader.load(new ByteArrayInputStream(execData));
+        CoverageBuilder builder = new CoverageBuilder();
+        Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
+        for (Long key : idBufferMap.keySet()) {
+            analyzer.analyzeClass(idBufferMap.get(key), "");
+        }
+        IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
+        MultiSourceFileLocator locator = new MultiSourceFileLocator(4);
+        if (sourcesDir != null) {
+            for (File source : Objects.requireNonNull(sourcesDir.listFiles())) {
+                String name = source.getName();
+                if (isArchive(name)) {
+                    File dest = new File(source.getParent(), name.substring(0, name.lastIndexOf(".")));
+                    if (!dest.exists()) {
+                        extractArchive(source, dest.toPath());
+                        locator.add(new DirectorySourceFileLocator(dest, "utf-8", 4));
+                    }
+                } else {
+                    locator.add(new DirectorySourceFileLocator(source, "utf-8", 4));
+                }
+            }
+        }
+        visitor.visitBundle(builder.getBundle(testDesc), locator);
+        visitor.visitEnd();
+    }
+
     private static String toVMName(final String srcName) {
         return srcName.replace('.', '/');
+    }
+
+    private static boolean isArchive(String name) {
+        return name.endsWith(".jar") || name.endsWith(".war") || name.endsWith(".zip");
+    }
+
+    private static void extractArchive(File source, Path destination) throws IOException {
+        Files.createDirectories(destination);
+        try (ZipFile archive = new ZipFile(source)) {
+            // Sort the entries to ensure that parents are created before children
+            List<? extends ZipEntry> entries = archive.stream()
+                    .sorted(Comparator.comparing(ZipEntry::getName))
+                    .collect(Collectors.toList());
+            for (ZipEntry entry : entries) {
+                Path entryDest = destination.resolve(entry.getName());
+                if (entry.isDirectory()) {
+                    Files.createDirectory(entryDest);
+                } else {
+                    Files.copy(archive.getInputStream(entry), entryDest);
+                }
+            }
+        }
     }
 
     private static class SuppressingAnalyzer extends Analyzer {

@@ -10,6 +10,9 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>meringue-examples</artifactId>
     <packaging>pom</packaging>
+    <properties>
+        <sourcesDirectory>${project.build.directory}/sources</sourcesDirectory>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.mozilla</groupId>
@@ -76,9 +79,27 @@
         <plugins>
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <!-- For each project dependency, set a property to point to the dependency's artifact file-->
                 <executions>
                     <execution>
+                        <!-- Copy the sources for each project dependency to the specified directory-->
+                        <id>copy-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>sources</classifier>
+                            <outputDirectory>${sourcesDirectory}</outputDirectory>
+                            <silent>true</silent>
+                            <includeGroupIds>
+                                org.mozilla,com.google.javascript,org.apache.maven,org.apache.ant,org.apache.bcel
+                            </includeGroupIds>
+                            <excludeGroupIds>com.sun,org.lichess,com.github.ornicar</excludeGroupIds>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- For each project dependency, set a property to point to the dependency's artifact file-->
+                        <id>set-properties</id>
                         <phase>process-resources</phase>
                         <goals>
                             <goal>properties</goal>
@@ -153,6 +174,7 @@
                                 <option>-Xmx8g</option>
                                 <option>-Djanala.conf=${project.build.testOutputDirectory}/janala.conf</option>
                             </javaOptions>
+                            <sources>${sourcesDirectory}</sources>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -189,6 +211,7 @@
                                 <option>-ea</option>
                                 <option>-Xmx8g</option>
                             </javaOptions>
+                            <sources>${sourcesDirectory}</sources>
                         </configuration>
                     </plugin>
                 </plugins>
