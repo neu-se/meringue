@@ -31,13 +31,15 @@ Where:
 * \<X\> is the maximum amount of time to execute the fuzzing campaign for specified in the ISO-8601 duration format (
   e.g., 2 days, 3 hours and 4 minutes is "P2DT3H4M"). The default value is one day.
 * The presence of -Dmeringue.debug indicates that forked analysis JVMs should suspend and wait for a debugger to attach.
-* By default, forked analysis JVMs do not suspend and wait for a debugger to attach.
+  By default, forked analysis JVMs do not suspend and wait for a debugger to attach.
 
 ## License
 
 This software release is licensed under the BSD 3-Clause License.
 
-Copyright (c) 2022, Katherine Hough and Jonathan Bell All rights reserved.
+Copyright (c) 2022, Katherine Hough and Jonathan Bell.
+
+All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 following conditions are met:
