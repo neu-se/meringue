@@ -10,10 +10,7 @@ import org.jacoco.core.internal.data.CRC64;
 import org.jacoco.core.internal.instr.InstrSupport;
 import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
-import org.jacoco.report.DirectorySourceFileLocator;
-import org.jacoco.report.FileMultiReportOutput;
-import org.jacoco.report.IReportVisitor;
-import org.jacoco.report.MultiSourceFileLocator;
+import org.jacoco.report.*;
 import org.jacoco.report.html.HTMLFormatter;
 import org.objectweb.asm.ClassReader;
 
@@ -82,6 +79,11 @@ class CoverageCalculator {
         }
         IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
+        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sourcesDir));
+        visitor.visitEnd();
+    }
+
+    private static ISourceFileLocator createLocator(File sourcesDir) throws IOException {
         MultiSourceFileLocator locator = new MultiSourceFileLocator(4);
         if (sourcesDir != null) {
             for (File source : Objects.requireNonNull(sourcesDir.listFiles())) {
@@ -97,8 +99,7 @@ class CoverageCalculator {
                 }
             }
         }
-        visitor.visitBundle(builder.getBundle(testDesc), locator);
-        visitor.visitEnd();
+        return locator;
     }
 
     private static String toVMName(final String srcName) {

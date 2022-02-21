@@ -12,25 +12,30 @@ public final class AnalysisForkMain {
     }
 
     public static void main(String[] args) throws Throwable {
+        String testClassName = args[0];
+        String testMethodName = args[1];
+        String replayerClassName = args[2];
+        int maxTraceSize = Integer.parseInt(args[3]);
+        int port = Integer.parseInt(args[4]);
+        StackTraceCleaner cleaner = new StackTraceCleaner(maxTraceSize);
+        Replayer replayer = (Replayer) Class.forName(replayerClassName)
+                .getDeclaredConstructor()
+                .newInstance();
+        replayer.configure(testClassName, testMethodName, AnalysisForkMain.class.getClassLoader());
         // Open the loopback connection
-        try (ForkConnection connection = new ForkConnection(Integer.parseInt(args[0]))) {
-            String testClassName = connection.receive(String.class);
-            String testMethodName = connection.receive(String.class);
-            String replayerClassName = connection.receive(String.class);
-            int maxTraceSize = connection.receive(Integer.class);
-            File[] inputFiles = connection.receive(File[].class);
-            StackTraceCleaner cleaner = new StackTraceCleaner(maxTraceSize);
-            Replayer replayer = (Replayer) Class.forName(replayerClassName).getDeclaredConstructor().newInstance();
-            replayer.configure(testClassName, testMethodName, AnalysisForkMain.class.getClassLoader());
-            // Reset the JaCoCo coverage
-            RT.getAgent().reset();
-            // Run the inputs
-            for (File inputFile : inputFiles) {
+        try (ForkConnection connection = new ForkConnection(port)) {
+            for(;;) {
+                File inputFile = connection.receive(File.class);
+                if(inputFile == null) {
+                    return;
+                }
                 // Read the input
                 byte[] input = Files.readAllBytes(inputFile.toPath());
+                // Reset the JaCoCo coverage
+                RT.getAgent().reset();
                 // Execute the test
                 Throwable result = replayer.execute(input);
-                // Send current JaCoCo coverage without resetting the coverage
+                // Send current JaCoCo coverage
                 connection.send(RT.getAgent().getExecutionData(false));
                 if (result == null) {
                     connection.send(false);
@@ -39,8 +44,6 @@ public final class AnalysisForkMain {
                     connection.send(cleaner.cleanStackTrace(result).toArray(new StackTraceElement[0]));
                 }
             }
-            // Wait for a shutdown signal
-            connection.receive(Object.class);
         }
     }
 }

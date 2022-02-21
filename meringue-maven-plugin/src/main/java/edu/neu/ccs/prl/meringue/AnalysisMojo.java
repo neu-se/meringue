@@ -8,7 +8,6 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -60,51 +59,44 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         try {
             CampaignConfiguration config = createConfiguration();
             FuzzFramework framework = createFramework(config);
-            List<File> inputFiles = collectInputFiles(framework);
-            if (inputFiles.isEmpty()) {
+            File[] inputFiles = collectInputFiles(framework);
+            if (inputFiles.length == 0) {
                 getLog().info("No input files were found for analysis");
                 return;
             }
+            if (sources != null && !sources.isDirectory()) {
+                getLog().warn("Invalid sources directory: " + sources);
+                sources = null;
+            }
             CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
             JvmLauncher launcher = createLauncher(config, framework, filter);
-            // Create a server socket bound to an automatically allocated port
-            try (ServerSocket server = new ServerSocket(0)) {
-                // Launch the analysis JVM
-                Process process = launcher.launch(new String[]{String.valueOf(server.getLocalPort())});
-                CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
-                CampaignReport report = new CampaignReport(calculator.getTotalBranches());
-                byte[] execData;
-                try (ForkConnection connection = new ForkConnection(server.accept())) {
-                    configureFork(config, framework, inputFiles, connection);
-                    execData = analyze(inputFiles, connection, report, calculator);
+            CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
+            CampaignReport report = new CampaignReport(calculator, sources);
+            try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report)) {
+                for (int i = 0; i < inputFiles.length; i++) {
+                    analyzer.analyze(inputFiles[i]);
+                    if ((i + 1) % 100 == 0) {
+                        System.out.printf("Analyzed %d/%d input files%n", i + 1, inputFiles.length);
+                    }
                 }
-                if (ProcessUtil.waitFor(process) != 0) {
-                    throw new IOException("Error occurred in forked analysis process");
-                }
-                report.print(getLog());
-                File coverageReportFile = new File(getOutputDir(), "coverage.csv");
-                File failuresReportFile = new File(getOutputDir(), "failures.txt");
-                File reportDir = new File(getOutputDir(), "final-report");
-                getLog().info("Writing coverage report to: " + coverageReportFile);
-                getLog().info("Writing failures report to: " + failuresReportFile);
-                report.write(coverageReportFile, failuresReportFile);
-                if (sources != null && !sources.isDirectory()) {
-                    getLog().warn("Invalid sources directory: " + sources);
-                    sources = null;
-                }
-                if (execData != null) {
-                    getLog().info("Writing JaCoCo report to: " + reportDir);
-                    calculator.createHtmlReport(execData, getTestDescription(),
-                            sources, reportDir);
-                }
+                report = analyzer.getReport();
             }
-        } catch (IOException | InterruptedException | ReflectiveOperationException e) {
+            report.print(getLog());
+            File coverageReportFile = new File(getOutputDir(), "coverage.csv");
+            File failuresReportFile = new File(getOutputDir(), "failures.txt");
+            getLog().info("Writing coverage report to: " + coverageReportFile);
+            getLog().info("Writing failures report to: " + failuresReportFile);
+            report.write(coverageReportFile, failuresReportFile);
+            File htmlReportDir = new File(getOutputDir(), "jacoco-report");
+            getLog().info("Writing JaCoCo report to: " + htmlReportDir);
+            report.writeHtmlReport(getTestDescription(), htmlReportDir);
+        } catch (IOException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
         }
     }
 
     private JvmLauncher createLauncher(CampaignConfiguration config, FuzzFramework framework, CoverageFilter filter)
-            throws MojoExecutionException {
+            throws MojoExecutionException, ReflectiveOperationException {
         List<String> options = new LinkedList<>(config.getJavaOptions());
         if (debug) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
@@ -112,53 +104,21 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         options.add("-cp");
         options.add(buildClassPath(createAnalysisJar(), config.getTestClassPathJar(), createFrameworkJar(framework)));
         options.add(filter.getJacocoOption());
+        String[] arguments = new String[]{config.getTestClassName(), config.getTestMethodName(),
+                framework.getReplayerClass().getName(), String.valueOf(maxTraceSize)};
         return new JvmLauncher.JavaMainLauncher(
                 config.getJavaExec(),
                 AnalysisForkMain.class.getName(),
                 options.toArray(new String[0]),
                 debug,
-                new String[0]
+                arguments
         );
     }
 
-    private void configureFork(CampaignConfiguration config, FuzzFramework framework, List<File> inputFiles,
-                               ForkConnection connection) throws IOException, ReflectiveOperationException {
-        connection.send(config.getTestClassName());
-        connection.send(config.getTestMethodName());
-        connection.send(framework.getReplayerClass().getName());
-        connection.send(maxTraceSize);
-        connection.send(inputFiles.toArray(new File[0]));
-    }
-
-    private byte[] analyze(List<File> inputFiles, ForkConnection connection, CampaignReport report,
-                           CoverageCalculator calculator) throws IOException, InterruptedException,
-            ReflectiveOperationException {
-        long firstTimestamp = inputFiles.isEmpty() ? 0 : inputFiles.get(0).lastModified();
-        int i = 0;
-        byte[] result = null;
-        for (File inputFile : inputFiles) {
-            long time = inputFile.lastModified() - firstTimestamp;
-            byte[] execData = connection.receive(byte[].class);
-            result = execData;
-            report.recordCoverage(time, calculator.calculate(execData));
-            if (connection.receive(Boolean.class)) {
-                StackTraceElement[] trace = connection.receive(StackTraceElement[].class);
-                report.recordFailure(inputFile, trace);
-            }
-            i++;
-            if (i % 100 == 0) {
-                System.out.printf("Analyzed %d/%d input files%n", i + 1, inputFiles.size());
-            }
-        }
-        // Send the shutdown signal
-        connection.send(null);
-        return result;
-    }
-
-    private static List<File> collectInputFiles(FuzzFramework framework) throws IOException {
+    private static File[] collectInputFiles(FuzzFramework framework) throws IOException {
         List<File> files = new LinkedList<>(Arrays.asList(framework.getCorpusFiles()));
         files.addAll(Arrays.asList(framework.getFailureFiles()));
         files.sort(Comparator.comparingLong(File::lastModified));
-        return files;
+        return files.toArray(new File[0]);
     }
 }

@@ -1,6 +1,7 @@
 package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.plugin.logging.Log;
+import org.jacoco.core.tools.ExecFileLoader;
 
 import java.io.*;
 import java.util.*;
@@ -8,22 +9,16 @@ import java.util.*;
 final class CampaignReport {
     private final Map<List<StackTraceElement>, List<File>> failureMap = new HashMap<>();
     private final long totalBranches;
+    private final CoverageCalculator calculator;
     private final List<long[]> rows = new ArrayList<>();
+    private final File sourcesDir;
+    private long firstTimestamp = -1;
+    private byte[] lastExecData = null;
 
-    public CampaignReport(long totalBranches) {
-        this.totalBranches = totalBranches;
-    }
-
-    public void recordCoverage(long time, long coveredBranches) {
-        rows.add(new long[]{time, coveredBranches});
-    }
-
-    public void recordFailure(File inputFile, StackTraceElement[] trace) {
-        List<StackTraceElement> elements = Arrays.asList(trace);
-        if (!failureMap.containsKey(elements)) {
-            failureMap.put(elements, new ArrayList<>());
-        }
-        failureMap.get(elements).add(inputFile);
+    public CampaignReport(CoverageCalculator calculator, File sourcesDir) {
+        this.totalBranches = calculator.getTotalBranches();
+        this.calculator = calculator;
+        this.sourcesDir = sourcesDir;
     }
 
     public void print(Log log) {
@@ -39,14 +34,14 @@ final class CampaignReport {
         }
     }
 
-    public void write(File coverageReportFile, File failuresReportFile) throws FileNotFoundException {
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(coverageReportFile)))) {
+    public void write(File coverageFile, File failuresFile) throws FileNotFoundException {
+        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(coverageFile)))) {
             out.printf("time, covered_branches (out of %d)%n", totalBranches);
             for (long[] row : rows) {
                 out.printf("%d, %d%n", row[0], row[1]);
             }
         }
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(failuresReportFile)))) {
+        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(failuresFile)))) {
             int i = 1;
             for (List<StackTraceElement> uniqueTrace : failureMap.keySet()) {
                 out.printf("%d. %s%n", i++, uniqueTrace);
@@ -55,5 +50,37 @@ final class CampaignReport {
                 }
             }
         }
+    }
+
+    public void writeHtmlReport(String testDescription, File reportDir) throws IOException {
+        calculator.createHtmlReport(lastExecData, testDescription, sourcesDir, reportDir);
+    }
+
+    public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {
+        if (firstTimestamp == -1) {
+            firstTimestamp = inputFile.lastModified();
+        }
+        long time = inputFile.lastModified() - firstTimestamp;
+        lastExecData = (lastExecData == null) ? execData : mergeExecData(lastExecData, execData);
+        rows.add(new long[]{time, calculator.calculate(lastExecData)});
+        if (trace != null) {
+            List<StackTraceElement> elements = Arrays.asList(trace);
+            if (!failureMap.containsKey(elements)) {
+                failureMap.put(elements, new ArrayList<>());
+            }
+            failureMap.get(elements).add(inputFile);
+        }
+    }
+
+    public void recordJvmCrash(File inputFile) {
+    }
+
+    private static byte[] mergeExecData(byte[] execData1, byte[] execData2) throws IOException {
+        ExecFileLoader loader = new ExecFileLoader();
+        loader.load(new ByteArrayInputStream(execData1));
+        loader.load(new ByteArrayInputStream(execData2));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        loader.save(out);
+        return out.toByteArray();
     }
 }
