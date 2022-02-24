@@ -69,7 +69,6 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
 
-
     Duration getDuration() {
         return Duration.parse(duration);
     }
