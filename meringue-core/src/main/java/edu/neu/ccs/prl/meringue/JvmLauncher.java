@@ -15,7 +15,11 @@ public abstract class JvmLauncher implements Serializable {
     private final boolean verbose;
     private final String[] arguments;
 
-    public JvmLauncher(File javaExec, String[] options, boolean verbose, String[] arguments) {
+    /**
+     * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
+     *                out and error of this process instead of discarded
+     */
+    JvmLauncher(File javaExec, String[] options, boolean verbose, String[] arguments) {
         if (!javaExec.isFile()) {
             throw new IllegalArgumentException();
         }
@@ -33,9 +37,9 @@ public abstract class JvmLauncher implements Serializable {
      * @throws SecurityException see {@link ProcessBuilder#start}
      * @throws IOException       if an I/O error occurs
      */
-    public abstract Process launch() throws IOException;
-
-    public abstract Process launch(String[] arguments) throws IOException;
+    public Process launch() throws IOException {
+        return ProcessUtil.start(new ProcessBuilder(createCommand()), isVerbose());
+    }
 
     public File getJavaExec() {
         return javaExec;
@@ -53,32 +57,42 @@ public abstract class JvmLauncher implements Serializable {
         return arguments.clone();
     }
 
-    /**
-     * Launches a forked JVM using a command of the form: java [ options ] -jar file.jar [ argument ... ].
-     *
-     * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
-     *                out and error of this process instead of discarded
-     * @throws NullPointerException if any argument is null
-     * @throws SecurityException    see {@link ProcessBuilder#start}
-     * @throws IOException          if an I/O error occurs
-     */
-    public static Process launchJvm(File javaExec, File jar, String[] options, boolean verbose, String... arguments)
-            throws IOException {
-        return new JarLauncher(javaExec, jar, options, verbose, arguments).launch();
+    abstract JvmLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments);
+
+    public JvmLauncher withJavaExec(File javaExec) {
+        return with(javaExec, options, verbose, arguments);
     }
 
-    /**
-     * Launches a forked JVM using a command of the form: java [ options ] class [ argument ... ].
-     *
-     * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
-     *                out and error of this process instead of discarded
-     * @throws NullPointerException if any argument is null
-     * @throws SecurityException    see {@link ProcessBuilder#start}
-     * @throws IOException          if an I/O error occurs
-     */
-    public static Process launchJvm(File javaExec, String mainClassName, String[] options, boolean verbose,
-                                    String... arguments) throws IOException {
-        return new JavaMainLauncher(javaExec, mainClassName, options, verbose, arguments).launch();
+    public JvmLauncher withOptions(String... options) {
+        return with(javaExec, options, verbose, arguments);
+    }
+
+    public JvmLauncher withVerbose(boolean verbose) {
+        return with(javaExec, options, verbose, arguments);
+    }
+
+    public JvmLauncher withArguments(String... arguments) {
+        return with(javaExec, options, verbose, arguments);
+    }
+
+    public String[] createCommand() {
+        return createCommand(arguments);
+    }
+
+    public abstract String[] createCommand(String... arguments);
+
+    public JvmLauncher appendArguments(String... arguments) {
+        String[] newArguments = new String[this.arguments.length + arguments.length];
+        System.arraycopy(this.arguments, 0, newArguments, 0, this.arguments.length);
+        System.arraycopy(arguments, 0, newArguments, this.arguments.length, arguments.length);
+        return withArguments(newArguments);
+    }
+
+    public JvmLauncher appendOptions(String... options) {
+        String[] newOptions = new String[this.options.length + options.length];
+        System.arraycopy(this.options, 0, newOptions, 0, this.options.length);
+        System.arraycopy(options, 0, newOptions, this.options.length, options.length);
+        return withOptions(newOptions);
     }
 
     private static <T> void checkElementsNonNull(T[] elements) {
@@ -90,16 +104,12 @@ public abstract class JvmLauncher implements Serializable {
     }
 
     /**
-     * Creates forked JVMs using a command of the form: java [ options ] class [ argument ... ].
+     * Creates forked JVMs using a command of the form: java [ options ] -jar file.jar [ argument ... ].
      */
     public static final class JarLauncher extends JvmLauncher {
         private static final long serialVersionUID = -6897111153301141296L;
         private final File jar;
 
-        /**
-         * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
-         *                out and error of this process instead of discarded
-         */
         public JarLauncher(File javaExec, File jar, String[] options, boolean verbose, String[] arguments) {
             super(javaExec, options, verbose, arguments);
             if (!jar.isFile()) {
@@ -109,12 +119,7 @@ public abstract class JvmLauncher implements Serializable {
         }
 
         @Override
-        public Process launch() throws IOException {
-            return launch(getArguments());
-        }
-
-        @Override
-        public Process launch(String[] arguments) throws IOException {
+        public String[] createCommand(String[] arguments) {
             String[] options = getOptions();
             String[] command = new String[options.length + arguments.length + 3];
             int i = 0;
@@ -127,7 +132,20 @@ public abstract class JvmLauncher implements Serializable {
             for (String argument : arguments) {
                 command[i++] = argument;
             }
-            return ProcessUtil.start(new ProcessBuilder(command), isVerbose());
+            return command;
+        }
+
+        @Override
+        JarLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments) {
+            return new JarLauncher(javaExec, jar, options, verbose, arguments);
+        }
+
+        public File getJar() {
+            return jar;
+        }
+
+        public JarLauncher withJar(File jar) {
+            return new JarLauncher(getJavaExec(), jar, getOptions(), isVerbose(), getArguments());
         }
     }
 
@@ -138,10 +156,6 @@ public abstract class JvmLauncher implements Serializable {
         private static final long serialVersionUID = 6658540649100605982L;
         private final String mainClassName;
 
-        /**
-         * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
-         *                out and error of this process instead of discarded
-         */
         public JavaMainLauncher(File javaExec, String mainClassName, String[] options, boolean verbose,
                                 String[] arguments) {
             super(javaExec, options, verbose, arguments);
@@ -152,12 +166,7 @@ public abstract class JvmLauncher implements Serializable {
         }
 
         @Override
-        public Process launch() throws IOException {
-            return launch(getArguments());
-        }
-
-        @Override
-        public Process launch(String[] arguments) throws IOException {
+        public String[] createCommand(String[] arguments) {
             String[] options = getOptions();
             String[] command = new String[options.length + arguments.length + 2];
             int i = 0;
@@ -169,7 +178,20 @@ public abstract class JvmLauncher implements Serializable {
             for (String argument : arguments) {
                 command[i++] = argument;
             }
-            return ProcessUtil.start(new ProcessBuilder(command), isVerbose());
+            return command;
+        }
+
+        @Override
+        JavaMainLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments) {
+            return new JavaMainLauncher(javaExec, mainClassName, options, verbose, arguments);
+        }
+
+        public String getMainClassName() {
+            return mainClassName;
+        }
+
+        public JavaMainLauncher withMainClassName(String mainClassName) {
+            return new JavaMainLauncher(getJavaExec(), mainClassName, getOptions(), isVerbose(), getArguments());
         }
     }
 }

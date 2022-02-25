@@ -9,16 +9,14 @@ final class CampaignAnalyzer implements Closeable {
     private final JvmLauncher launcher;
     private final CampaignReport report;
     private final ServerSocket server;
-    private final String[] arguments;
     private ForkConnection connection;
     private Process process;
 
     CampaignAnalyzer(JvmLauncher launcher, CampaignReport report) throws IOException {
-        this.launcher = launcher;
         this.report = report;
         // Create a server socket bound to an automatically allocated port
         this.server = new ServerSocket(0);
-        this.arguments = augmentArguments(launcher, server.getLocalPort());
+        this.launcher = launcher.appendArguments(String.valueOf(server.getLocalPort()));
     }
 
     CampaignReport getReport() {
@@ -28,7 +26,7 @@ final class CampaignAnalyzer implements Closeable {
     private void restartConnection() throws IOException {
         closeConnection();
         // Launch the analysis JVM
-        this.process = launcher.launch(arguments);
+        this.process = launcher.launch();
         // Connection to the JVM
         this.connection = new ForkConnection(server.accept());
     }
@@ -82,13 +80,5 @@ final class CampaignAnalyzer implements Closeable {
     public void close() throws IOException {
         server.close();
         closeConnection();
-    }
-
-    private static String[] augmentArguments(JvmLauncher launcher, int port) {
-        String[] arguments = launcher.getArguments();
-        String[] fullArgs = new String[arguments.length + 1];
-        System.arraycopy(arguments, 0, fullArgs, 0, arguments.length);
-        fullArgs[fullArgs.length - 1] = String.valueOf(port);
-        return fullArgs;
     }
 }
