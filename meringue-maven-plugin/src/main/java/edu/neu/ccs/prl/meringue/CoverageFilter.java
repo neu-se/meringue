@@ -52,7 +52,8 @@ public final class CoverageFilter {
     }
 
     public String getJacocoOption() {
-        String opt = String.format("-javaagent:%s=output=none", FileUtil.getClassPathElement(PreMain.class));
+        String opt = String.format("-javaagent:%s=output=none", FileUtil.getClassPathElement(PreMain.class)
+                .getAbsolutePath());
         if (!exclusions.isEmpty()) {
             opt += ",excludes=" + String.join(":", exclusions);
         }
