@@ -110,7 +110,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 config.getJavaExec(),
                 AnalysisForkMain.class.getName(),
                 options.toArray(new String[0]),
-                debug,
+                debug | Boolean.getBoolean("meringue.verbose"),
                 arguments
         );
     }
