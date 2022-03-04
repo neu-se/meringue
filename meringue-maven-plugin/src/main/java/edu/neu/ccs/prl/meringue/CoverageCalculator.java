@@ -120,8 +120,9 @@ class CoverageCalculator {
             for (ZipEntry entry : entries) {
                 Path entryDest = destination.resolve(entry.getName());
                 if (entry.isDirectory()) {
-                    Files.createDirectory(entryDest);
+                    FileUtil.ensureDirectory(entryDest.toFile());
                 } else {
+                    FileUtil.ensureDirectory(entryDest.getParent().toFile());
                     Files.copy(archive.getInputStream(entry), entryDest);
                 }
             }
