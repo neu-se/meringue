@@ -11,14 +11,14 @@ final class CampaignReport {
     private final long totalBranches;
     private final CoverageCalculator calculator;
     private final List<long[]> rows = new ArrayList<>();
-    private final File sourcesDir;
+    private final File[] sources;
     private long firstTimestamp = -1;
     private byte[] lastExecData = null;
 
-    public CampaignReport(CoverageCalculator calculator, File sourcesDir) {
+    public CampaignReport(CoverageCalculator calculator, File[] sources) {
         this.totalBranches = calculator.getTotalBranches();
         this.calculator = calculator;
-        this.sourcesDir = sourcesDir;
+        this.sources = sources.clone();
     }
 
     public void print(Log log) {
@@ -53,7 +53,7 @@ final class CampaignReport {
     }
 
     public void writeHtmlReport(String testDescription, File reportDir) throws IOException {
-        calculator.createHtmlReport(lastExecData, testDescription, sourcesDir, reportDir);
+        calculator.createHtmlReport(lastExecData, testDescription, sources, reportDir);
     }
 
     public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {

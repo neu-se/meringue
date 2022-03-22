@@ -8,10 +8,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Maven plugin that analyzes the results of a fuzzing campaign.
@@ -24,6 +21,10 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      */
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
+    @Parameter(defaultValue = "${project.build.sourceDirectory}", readonly = true, required = true)
+    private File appSourcesDir;
+    @Parameter(defaultValue = "${project.build.testSourceDirectory}", readonly = true, required = true)
+    private File testSourcesDir;
     /**
      * List of class files to include in reports. May use wildcard
      * characters (* and ?). By default, all files are included.
@@ -71,7 +72,12 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
             JvmLauncher launcher = createLauncher(config, framework, filter);
             CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
-            CampaignReport report = new CampaignReport(calculator, sources);
+            List<File> sourceDirs = new LinkedList<>(Arrays.asList(testSourcesDir, appSourcesDir));
+            if (sources != null) {
+                sourceDirs.addAll(Arrays.asList(Objects.requireNonNull(sources.listFiles())));
+            }
+            CampaignReport report = new CampaignReport(calculator,
+                    sourceDirs.stream().filter(f -> f != null && f.exists()).toArray(File[]::new));
             try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report)) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);

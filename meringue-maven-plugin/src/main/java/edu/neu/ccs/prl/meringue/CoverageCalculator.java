@@ -68,7 +68,7 @@ class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createHtmlReport(byte[] execData, String testDesc, File sourcesDir, File reportDir)
+    public void createHtmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
             throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
@@ -79,24 +79,22 @@ class CoverageCalculator {
         }
         IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sourcesDir));
+        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
         visitor.visitEnd();
     }
 
-    private static ISourceFileLocator createLocator(File sourcesDir) throws IOException {
+    private static ISourceFileLocator createLocator(File[] sources) throws IOException {
         MultiSourceFileLocator locator = new MultiSourceFileLocator(4);
-        if (sourcesDir != null) {
-            for (File source : Objects.requireNonNull(sourcesDir.listFiles())) {
-                String name = source.getName();
-                if (isArchive(name)) {
-                    File dest = new File(source.getParent(), name.substring(0, name.lastIndexOf(".")));
-                    if (!dest.exists()) {
-                        extractArchive(source, dest.toPath());
-                        locator.add(new DirectorySourceFileLocator(dest, "utf-8", 4));
-                    }
-                } else {
-                    locator.add(new DirectorySourceFileLocator(source, "utf-8", 4));
+        for (File source : sources) {
+            String name = source.getName();
+            if (isArchive(name)) {
+                File dest = new File(source.getParent(), name.substring(0, name.lastIndexOf(".")));
+                if (!dest.exists()) {
+                    extractArchive(source, dest.toPath());
+                    locator.add(new DirectorySourceFileLocator(dest, "utf-8", 4));
                 }
+            } else {
+                locator.add(new DirectorySourceFileLocator(source, "utf-8", 4));
             }
         }
         return locator;
