@@ -136,6 +136,10 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
+    String getFramework() {
+        return framework;
+    }
+
     File createFrameworkJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
         try {
             File jar = new File(getLibraryDirectory(), "framework.jar");

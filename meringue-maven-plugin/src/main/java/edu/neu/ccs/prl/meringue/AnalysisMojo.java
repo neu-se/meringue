@@ -6,8 +6,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -21,10 +20,16 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      */
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
+    /**
+     * Directory containing source files for the current Maven project.
+     */
     @Parameter(defaultValue = "${project.build.sourceDirectory}", readonly = true, required = true)
-    private File appSourcesDir;
+    private File projectSourceDir;
+    /**
+     * Directory containing test source files for the current Maven project.
+     */
     @Parameter(defaultValue = "${project.build.testSourceDirectory}", readonly = true, required = true)
-    private File testSourcesDir;
+    private File testSourceDir;
     /**
      * List of class files to include in reports. May use wildcard
      * characters (* and ?). By default, all files are included.
@@ -72,7 +77,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
             JvmLauncher launcher = createLauncher(config, framework, filter);
             CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
-            List<File> sourceDirs = new LinkedList<>(Arrays.asList(testSourcesDir, appSourcesDir));
+            List<File> sourceDirs = new LinkedList<>(Arrays.asList(testSourceDir, projectSourceDir));
             if (sources != null) {
                 sourceDirs.addAll(Arrays.asList(Objects.requireNonNull(sources.listFiles())));
             }
@@ -88,6 +93,9 @@ public class AnalysisMojo extends AbstractMeringueMojo {
                 report = analyzer.getReport();
             }
             report.print(getLog());
+            File configFile = new File(getOutputDir(), "config.txt");
+            getLog().info("Writing configuration information to: " + configFile);
+            writeConfigurationInfo(config, configFile);
             File coverageReportFile = new File(getOutputDir(), "coverage.csv");
             File failuresReportFile = new File(getOutputDir(), "failures.txt");
             getLog().info("Writing coverage report to: " + coverageReportFile);
@@ -98,6 +106,19 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             report.writeHtmlReport(getTestDescription(), htmlReportDir);
         } catch (IOException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
+        }
+    }
+
+    private void writeConfigurationInfo(CampaignConfiguration config, File file) throws IOException {
+        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+            out.printf("test_class_name: %s%n", config.getTestClassName());
+            out.printf("test_method_name: %s%n", config.getTestMethodName());
+            out.printf("duration_ms: %s%n", config.getDuration().toMillis());
+            out.printf("framework: %s%n", getFramework());
+            out.printf("output_directory: %s%n", config.getOutputDir().getAbsolutePath());
+            out.printf("java_executable: %s%n", config.getJavaExec().getAbsolutePath());
+            out.printf("java_options: %s%n", String.join(" ", config.getJavaOptions())
+                    .replaceAll(System.getProperty("line.separator"), " "));
         }
     }
 
