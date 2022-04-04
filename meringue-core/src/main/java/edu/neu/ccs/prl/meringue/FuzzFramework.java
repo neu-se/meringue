@@ -21,4 +21,12 @@ public interface FuzzFramework {
     Class<? extends Replayer> getReplayerClass() throws ReflectiveOperationException;
 
     Collection<File> getRequiredClassPathElements();
+
+    default boolean canRestartCampaign() {
+        return false;
+    }
+
+    default Process restartCampaign() throws IOException {
+        throw new UnsupportedOperationException();
+    }
 }

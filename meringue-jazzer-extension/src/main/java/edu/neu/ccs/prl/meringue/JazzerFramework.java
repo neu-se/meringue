@@ -15,6 +15,7 @@ public final class JazzerFramework implements FuzzFramework {
     private File reproducerDir;
     private File workingDir;
     private ProcessBuilder builder;
+    private boolean quiet = false;
 
     @Override
     public void initialize(CampaignConfiguration config, Properties frameworkArguments) throws IOException {
@@ -34,6 +35,7 @@ public final class JazzerFramework implements FuzzFramework {
         if (!config.getJavaOptions().isEmpty()) {
             command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
         }
+        quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
         String argLine = frameworkArguments.getProperty("argLine");
         if (argLine != null && !argLine.isEmpty()) {
             for (String s : argLine.split("\\s")) {
@@ -54,7 +56,7 @@ public final class JazzerFramework implements FuzzFramework {
         FileUtil.createOrCleanDirectory(corpusDir);
         FileUtil.createOrCleanDirectory(reproducerDir);
         FileUtil.createOrCleanDirectory(workingDir);
-        return ProcessUtil.start(builder, true);
+        return ProcessUtil.start(builder, !quiet);
     }
 
     @Override
@@ -77,6 +79,20 @@ public final class JazzerFramework implements FuzzFramework {
     @Override
     public Collection<File> getRequiredClassPathElements() {
         return Collections.singleton(FileUtil.getClassPathElement(JazzerFramework.class));
+    }
+
+    @Override
+    public boolean canRestartCampaign() {
+        return true;
+    }
+
+    @Override
+    public Process restartCampaign() throws IOException {
+        FileUtil.ensureDirectory(outputDir);
+        FileUtil.ensureDirectory(corpusDir);
+        FileUtil.ensureDirectory(reproducerDir);
+        FileUtil.ensureDirectory(workingDir);
+        return ProcessUtil.start(builder, !quiet);
     }
 
     private static File getJazzerExecutable(File outputDir) throws IOException {

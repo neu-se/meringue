@@ -20,12 +20,31 @@ public class FuzzingMojo extends AbstractMeringueMojo {
             getLog().info("Running fuzzing campaign: " + getTestDescription());
             FileUtil.createOrCleanDirectory(getOutputDir());
             CampaignConfiguration config = createConfiguration();
-            Process process = createFramework(config).startCampaign();
-            if (ProcessUtil.waitFor(process, getDuration().toMillis(), TimeUnit.MILLISECONDS)) {
-                throw new IOException("Campaign process terminated unexpectedly");
+            FuzzFramework framework = createFramework(config);
+            if (framework.canRestartCampaign()) {
+                runWithResets(framework);
+            } else {
+                if (ProcessUtil.waitFor(framework.startCampaign(), getDuration().toMillis(), TimeUnit.MILLISECONDS)) {
+                    throw new IOException("Campaign process terminated unexpectedly");
+                }
             }
         } catch (IOException | InterruptedException e) {
             throw new MojoExecutionException("Failed to execute fuzzing campaign", e);
+        }
+    }
+
+    private void runWithResets(FuzzFramework framework) throws IOException, InterruptedException {
+        long endTime = System.currentTimeMillis() + getDuration().toMillis();
+        if (!ProcessUtil.waitFor(framework.startCampaign(), getDuration().toMillis(), TimeUnit.MILLISECONDS)) {
+            return;
+        } else {
+            getLog().info("Restarting campaign");
+        }
+        while (endTime > System.currentTimeMillis()) {
+            long remaining = endTime - System.currentTimeMillis();
+            if (!ProcessUtil.waitFor(framework.restartCampaign(), remaining, TimeUnit.MILLISECONDS)) {
+                return;
+            }
         }
     }
 }
