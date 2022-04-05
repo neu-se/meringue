@@ -53,7 +53,8 @@ final class CampaignReport {
     }
 
     public void writeHtmlReport(String testDescription, File reportDir) throws IOException {
-        calculator.createHtmlReport(lastExecData, testDescription, sources, reportDir);
+        calculator.createHtmlReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources,
+                reportDir);
     }
 
     public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {
