@@ -68,7 +68,6 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             File[] inputFiles = collectInputFiles(framework);
             if (inputFiles.length == 0) {
                 getLog().info("No input files were found for analysis");
-                return;
             }
             if (sources != null && !sources.isDirectory()) {
                 getLog().warn("Invalid sources directory: " + sources);
