@@ -7,6 +7,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 
 /**
@@ -58,6 +59,12 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      */
     @Parameter(property = "meringue.sources")
     private File sources;
+    /**
+     * Maximum amount of time in seconds to execute a single replayed input or {@code -1} if no timeout should be
+     * used. By default, a timeout value of {@code 600} seconds is used.
+     */
+    @Parameter(property = "meringue.timeout", defaultValue = "600")
+    private long timeout;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -82,7 +89,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             }
             CampaignReport report = new CampaignReport(calculator,
                     sourceDirs.stream().filter(f -> f != null && f.exists()).toArray(File[]::new));
-            try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report)) {
+            try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout)) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
                     if ((i + 1) % 100 == 0) {
@@ -109,7 +116,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     }
 
     private void writeConfigurationInfo(CampaignConfiguration config, File file) throws IOException {
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+        try (PrintStream out = new PrintStream(new BufferedOutputStream(Files.newOutputStream(file.toPath())))) {
             out.printf("test_class_name: %s%n", config.getTestClassName());
             out.printf("test_method_name: %s%n", config.getTestMethodName());
             out.printf("duration_ms: %s%n", config.getDuration().toMillis());
@@ -118,6 +125,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             out.printf("java_executable: %s%n", config.getJavaExec().getAbsolutePath());
             out.printf("java_options: %s%n", String.join(" ", config.getJavaOptions())
                     .replaceAll(System.getProperty("line.separator"), " "));
+            out.printf("replay_timeout: %d%n", timeout);
         }
     }
 
