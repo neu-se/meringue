@@ -14,6 +14,7 @@ public final class JazzerFramework implements FuzzFramework {
     private File corpusDir;
     private File reproducerDir;
     private File workingDir;
+    private File logFile;
     private ProcessBuilder builder;
     private boolean quiet = false;
 
@@ -23,6 +24,7 @@ public final class JazzerFramework implements FuzzFramework {
         corpusDir = new File(outputDir, "corpus");
         reproducerDir = new File(outputDir, "reproducer");
         workingDir = new File(outputDir, "out");
+        logFile = new File(outputDir, "jazzer.log");
         List<String> command = new LinkedList<>();
         command.add(getJazzerExecutable(outputDir).getAbsolutePath());
         String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator
@@ -56,7 +58,14 @@ public final class JazzerFramework implements FuzzFramework {
         FileUtil.createOrCleanDirectory(corpusDir);
         FileUtil.createOrCleanDirectory(reproducerDir);
         FileUtil.createOrCleanDirectory(workingDir);
-        return ProcessUtil.start(builder, !quiet);
+        if (logFile.exists() && !logFile.delete()) {
+            throw new IOException("Failed to delete existing Jazzer log file: " + logFile);
+        }
+        if (!quiet) {
+            return ProcessUtil.start(builder, true);
+        } else {
+            return builder.redirectError(logFile).redirectOutput(logFile).start();
+        }
     }
 
     @Override
