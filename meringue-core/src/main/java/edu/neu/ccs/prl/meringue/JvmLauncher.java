@@ -8,7 +8,7 @@ public abstract class JvmLauncher implements Serializable {
     /**
      * Prefix of JVM option indicating that the JVM should suspend and wait for a debugger to attach.
      */
-    public static final String DEBUG_OPT = "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=";
+    public static final String DEBUG_OPT = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=127.0.0.1:";
     private static final long serialVersionUID = -2657754668579290763L;
     private final File javaExec;
     private final String[] options;
