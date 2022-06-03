@@ -27,13 +27,17 @@ public final class JazzerFramework implements FuzzFramework {
         logFile = new File(outputDir, "jazzer.log");
         List<String> command = new LinkedList<>();
         command.add(getJazzerExecutable(outputDir).getAbsolutePath());
-        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator
-                + FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
+        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
+                FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
         command.add("--cp=" + classPath);
-        command.add("--target_class=" + JazzerTargetWrapper.class.getName());
+        if (config.getTestMethodName().equals("fuzzerTestOneInput")) {
+            command.add("--target_class=" + config.getTestClassName());
+        } else {
+            command.add("--target_class=" + JazzerTargetWrapper.class.getName());
+            command.add("--target_args=" + config.getTestClassName() + " " + config.getTestMethodName());
+        }
         command.add("--keep_going=" + Integer.MAX_VALUE);
         command.add("--reproducer_path=" + reproducerDir.getAbsolutePath());
-        command.add("--target_args=" + config.getTestClassName() + " " + config.getTestMethodName());
         if (!config.getJavaOptions().isEmpty()) {
             command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
         }
@@ -76,8 +80,8 @@ public final class JazzerFramework implements FuzzFramework {
     @Override
     public File[] getFailureFiles() {
         return Arrays.stream(Objects.requireNonNull(workingDir.listFiles()))
-                .filter(f -> f.getName().startsWith("crash-"))
-                .toArray(File[]::new);
+                     .filter(f -> f.getName().startsWith("crash-"))
+                     .toArray(File[]::new);
     }
 
     @Override
@@ -117,11 +121,7 @@ public final class JazzerFramework implements FuzzFramework {
         } else {
             throw new IllegalStateException("Operating system not supported");
         }
-        String[] resourceNames = new String[]{
-                "jazzer_agent_deploy.jar",
-                "jazzer_api_deploy.jar",
-                executableName
-        };
+        String[] resourceNames = new String[]{"jazzer_agent_deploy.jar", "jazzer_api_deploy.jar", executableName};
         File bin = new File(outputDir, "bin");
         FileUtil.ensureDirectory(bin);
         File jazzerExec = new File(bin, executableName);
