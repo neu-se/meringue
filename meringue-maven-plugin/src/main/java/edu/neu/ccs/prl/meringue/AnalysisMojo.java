@@ -1,14 +1,25 @@
 package edu.neu.ccs.prl.meringue;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.plugins.annotations.*;
+import org.apache.maven.plugins.dependency.utils.translators.ArtifactTranslator;
+import org.apache.maven.plugins.dependency.utils.translators.ClassifierTypeTranslator;
+import org.apache.maven.project.DefaultProjectBuildingRequest;
+import org.apache.maven.project.ProjectBuildingRequest;
+import org.apache.maven.shared.transfer.artifact.ArtifactCoordinate;
+import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
+import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolverException;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Maven plugin that analyzes the results of a fuzzing campaign.
@@ -17,20 +28,15 @@ import java.util.*;
         requiresDependencyResolution = ResolutionScope.TEST)
 public class AnalysisMojo extends AbstractMeringueMojo {
     /**
+     * The Maven session.
+     */
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    protected MavenSession session;
+    /**
      * List of JARs, directories, and files to be included in the reports.
      */
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
-    /**
-     * Directory containing source files for the current Maven project.
-     */
-    @Parameter(defaultValue = "${project.build.sourceDirectory}", readonly = true, required = true)
-    private File projectSourceDir;
-    /**
-     * Directory containing test source files for the current Maven project.
-     */
-    @Parameter(defaultValue = "${project.build.testSourceDirectory}", readonly = true, required = true)
-    private File testSourceDir;
     /**
      * List of class files to include in reports. May use wildcard
      * characters (* and ?). By default, all files are included.
@@ -55,16 +61,15 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter(property = "meringue.debug", defaultValue = "false")
     private boolean debug;
     /**
-     * Directory containing source code archives and directories.
-     */
-    @Parameter(property = "meringue.sources")
-    private File sources;
-    /**
      * Maximum amount of time in seconds to execute a single replayed input or {@code -1} if no timeout should be
      * used. By default, a timeout value of {@code 600} seconds is used.
      */
     @Parameter(property = "meringue.timeout", defaultValue = "600")
     private long timeout;
+    @Component
+    private ArtifactResolver artifactResolver;
+    @Component
+    private ArtifactHandlerManager artifactHandlerManager;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -76,19 +81,10 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             if (inputFiles.length == 0) {
                 getLog().info("No input files were found for analysis");
             }
-            if (sources != null && !sources.isDirectory()) {
-                getLog().warn("Invalid sources directory: " + sources);
-                sources = null;
-            }
             CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
             JvmLauncher launcher = createLauncher(config, framework, filter);
             CoverageCalculator calculator = filter.createCoverageCalculator(getTestClassPathElements());
-            List<File> sourceDirs = new LinkedList<>(Arrays.asList(testSourceDir, projectSourceDir));
-            if (sources != null) {
-                sourceDirs.addAll(Arrays.asList(Objects.requireNonNull(sources.listFiles())));
-            }
-            CampaignReport report = new CampaignReport(calculator,
-                    sourceDirs.stream().filter(f -> f != null && f.exists()).toArray(File[]::new));
+            CampaignReport report = new CampaignReport(calculator, getSources());
             try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout)) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
@@ -123,8 +119,8 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             out.printf("framework: %s%n", getFramework());
             out.printf("output_directory: %s%n", config.getOutputDir().getAbsolutePath());
             out.printf("java_executable: %s%n", config.getJavaExec().getAbsolutePath());
-            out.printf("java_options: %s%n", String.join(" ", config.getJavaOptions())
-                    .replaceAll(System.getProperty("line.separator"), " "));
+            out.printf("java_options: %s%n",
+                       String.join(" ", config.getJavaOptions()).replaceAll(System.getProperty("line.separator"), " "));
             out.printf("replay_timeout: %d%n", timeout);
         }
     }
@@ -140,13 +136,39 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         options.add(filter.getJacocoOption());
         String[] arguments = new String[]{config.getTestClassName(), config.getTestMethodName(),
                 framework.getReplayerClass().getName(), String.valueOf(maxTraceSize)};
-        return new JvmLauncher.JavaMainLauncher(
-                config.getJavaExec(),
-                AnalysisForkMain.class.getName(),
-                options.toArray(new String[0]),
-                debug | Boolean.getBoolean("meringue.verbose"),
-                arguments
-        );
+        return new JvmLauncher.JavaMainLauncher(config.getJavaExec(), AnalysisForkMain.class.getName(),
+                                                options.toArray(new String[0]),
+                                                debug | Boolean.getBoolean("meringue.verbose"), arguments);
+    }
+
+    private File[] getSources() {
+        Set<Artifact> artifacts = getProject().getArtifacts()
+                                              .stream()
+                                              .filter(a -> a.getArtifactHandler().isAddedToClasspath())
+                                              .collect(Collectors.toSet());
+        ArtifactTranslator translator = new ClassifierTypeTranslator(artifactHandlerManager, "sources", "");
+        Collection<ArtifactCoordinate> coordinates = translator.translate(artifacts, getLog());
+        Set<Artifact> testSources = resolve(new LinkedHashSet<>(coordinates));
+        Set<File> sourceDirs = testSources.stream().map(Artifact::getFile).collect(Collectors.toSet());
+        sourceDirs.add(new File(getProject().getBuild().getTestSourceDirectory()));
+        sourceDirs.add(new File(getProject().getBuild().getSourceDirectory()));
+        return sourceDirs.stream()
+                         .filter(f -> f != null && f.exists())
+                         .toArray(File[]::new);
+    }
+
+    private Set<Artifact> resolve(Set<ArtifactCoordinate> coordinates) {
+        ProjectBuildingRequest buildingRequest = new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
+        buildingRequest.setRemoteRepositories(getProject().getRemoteArtifactRepositories());
+        Set<Artifact> result = new LinkedHashSet<>();
+        for (ArtifactCoordinate coordinate : coordinates) {
+            try {
+                result.add(artifactResolver.resolveArtifact(buildingRequest, coordinate).getArtifact());
+            } catch (ArtifactResolverException ex) {
+                getLog().debug("error resolving: " + coordinate);
+            }
+        }
+        return result;
     }
 
     private static File[] collectInputFiles(FuzzFramework framework) throws IOException {

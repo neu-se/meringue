@@ -81,7 +81,7 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         validateJavaExec();
         initializeOutputDir();
         return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(),
-                javaOptions, createTestJar(), javaExec);
+                                         javaOptions, createTestJar(), javaExec);
     }
 
     Set<File> getTestClassPathElements() throws MojoExecutionException {
@@ -154,7 +154,7 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         try {
             File jar = new File(getLibraryDirectory(), "analysis.jar");
             FileUtil.buildManifestJar(Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class)
-                    .map(FileUtil::getClassPathElement).collect(Collectors.toList()), jar);
+                                            .map(FileUtil::getClassPathElement).collect(Collectors.toList()), jar);
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
@@ -169,8 +169,12 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         List<File> elements = new LinkedList<>(Arrays.asList(remainingClassPathElements));
         elements.add(classPathElement);
         return elements.stream()
-                .map(File::getAbsolutePath)
-                .map(SurefireHelper::escapeToPlatformPath)
-                .collect(Collectors.joining(File.pathSeparator));
+                       .map(File::getAbsolutePath)
+                       .map(SurefireHelper::escapeToPlatformPath)
+                       .collect(Collectors.joining(File.pathSeparator));
+    }
+
+    MavenProject getProject() {
+        return project;
     }
 }
