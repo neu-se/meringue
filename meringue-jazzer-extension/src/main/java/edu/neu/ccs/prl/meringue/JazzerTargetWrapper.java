@@ -11,7 +11,7 @@ public final class JazzerTargetWrapper {
 
     private JazzerTargetWrapper() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                "not be instantiated");
+                                         "not be instantiated");
     }
 
     public static void fuzzerInitialize(String[] args) {
@@ -32,9 +32,6 @@ public final class JazzerTargetWrapper {
             if (rethrow) {
                 throw lastThrown;
             }
-        } catch (Throwable t) {
-            t.printStackTrace();
-            System.exit(-1);
         }
     }
 

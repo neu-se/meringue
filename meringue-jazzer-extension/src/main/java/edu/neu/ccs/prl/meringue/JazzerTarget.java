@@ -13,34 +13,39 @@ public final class JazzerTarget {
     private final boolean takesRawBytes;
 
     public JazzerTarget(String testClassName, String testMethodName, ClassLoader classLoader) {
-        if (testClassName == null || testMethodName == null) {
+        if (testClassName == null) {
             throw new NullPointerException();
         }
         Class<?> testClass = findTestClass(testClassName, classLoader);
-        this.testConstructor = getTestConstructor(testClass);
-        this.testMethod = findTestMethod(testClass, testMethodName);
+        if (testMethodName.equals("fuzzerTestOneInput")) {
+            this.testConstructor = null;
+        } else {
+            this.testConstructor = getTestConstructor(testClass);
+        }
+        this.testMethod = findTestMethod(testClass, testMethodName, testConstructor == null);
         this.takesRawBytes = testMethod.getParameterTypes()[0].equals(byte[].class);
     }
 
-    public Constructor<?> getTestConstructor() {
-        return testConstructor;
-    }
-
-    public Method getTestMethod() {
-        return testMethod;
-    }
-
     public void execute(FuzzedDataProvider input) throws InvocationTargetException {
-        Object testInstance;
-        try {
-            testInstance = testConstructor.newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Failed to create test instance", e);
+        Object receiver = null;
+        if (testConstructor != null) {
+            try {
+                receiver = testConstructor.newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                if (e instanceof InvocationTargetException && e.getCause() instanceof OutOfMemoryError) {
+                    throw (OutOfMemoryError) e.getCause();
+                }
+                throw new IllegalStateException("Failed to create test instance", e);
+            }
         }
         try {
             Object[] args = new Object[]{takesRawBytes ? input.consumeRemainingAsBytes() : input};
-            testMethod.invoke(testInstance, args);
-        } catch (IllegalAccessException e) {
+            testMethod.invoke(receiver, args);
+        } catch (ExceptionInInitializerError | NullPointerException | IllegalArgumentException |
+                 IllegalAccessException e) {
+            if (e instanceof ExceptionInInitializerError && e.getCause() instanceof OutOfMemoryError) {
+                throw (OutOfMemoryError) e.getCause();
+            }
             throw new IllegalStateException("Failed to call test method", e);
         }
     }
@@ -74,33 +79,29 @@ public final class JazzerTarget {
         return !Modifier.isAbstract(clazz.getModifiers()) && !clazz.isInterface();
     }
 
-    private static Method findTestMethod(Class<?> testClass, String methodName, Class<?>... parameterTypes) {
+    private static Method findTestMethod(Class<?> testClass, String methodName, boolean isStatic) {
         Method testMethod = null;
         for (Method m : testClass.getMethods()) {
-            if (m.getName().equals(methodName) && isValidTestMethod(m)) {
+            if (m.getName().equals(methodName) && isValidTestMethod(m, isStatic)) {
                 if (testMethod == null) {
                     testMethod = m;
                 } else {
-                    throw new IllegalArgumentException("Found multiple public, non-static, void methods in class "
-                            + testClass + " with name" + methodName);
+                    throw new IllegalArgumentException(
+                            "Found multiple public, void methods in class " + testClass + " with name" + methodName);
                 }
             }
         }
         if (testMethod == null) {
-            throw new IllegalArgumentException("Could not find public, non-static, void method in class " + testClass +
-                    " with name" + methodName);
+            throw new IllegalArgumentException(
+                    "Could not find public, void method in class " + testClass + " with name " + methodName);
         }
         testMethod.setAccessible(true);
         return testMethod;
     }
 
-    private static boolean isValidTestMethod(Method m) {
-        return !m.isBridge()
-                && !m.isSynthetic()
-                && !Modifier.isStatic(m.getModifiers())
-                && Modifier.isPublic(m.getModifiers())
-                && m.getReturnType() == Void.TYPE
-                && hasValidParameters(m);
+    private static boolean isValidTestMethod(Method m, boolean isStatic) {
+        return !m.isBridge() && !m.isSynthetic() && Modifier.isStatic(m.getModifiers()) == isStatic &&
+                Modifier.isPublic(m.getModifiers()) && m.getReturnType() == Void.TYPE && hasValidParameters(m);
     }
 
     private static boolean hasValidParameters(Method m) {
