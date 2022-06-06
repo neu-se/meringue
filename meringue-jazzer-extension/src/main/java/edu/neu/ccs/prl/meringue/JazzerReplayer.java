@@ -6,7 +6,7 @@ public final class JazzerReplayer implements edu.neu.ccs.prl.meringue.Replayer {
     @Override
     public void configure(String testClassName, String testMethodName, ClassLoader classLoader) {
         JazzerTargetWrapper.fuzzerInitialize(new String[]{testClassName, testMethodName});
-        JazzerTargetWrapper.setRethrow(true);
+        JazzerTargetWrapper.setRethrow(false);
     }
 
     @Override

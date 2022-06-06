@@ -88,7 +88,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout)) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
-                    if ((i + 1) % 100 == 0) {
+                    if ((i + 1) % 100 == 1) {
                         System.out.printf("Analyzed %d/%d input files%n", i + 1, inputFiles.length);
                     }
                 }
