@@ -115,9 +115,6 @@ public final class JazzerFramework implements FuzzFramework {
             resourcePathPrefix = "mac";
         } else if (SystemUtils.IS_OS_LINUX) {
             resourcePathPrefix = "linux";
-        } else if (SystemUtils.IS_OS_WINDOWS) {
-            resourcePathPrefix = "windows";
-            executableName = "jazzer.exe";
         } else {
             throw new IllegalStateException("Operating system not supported");
         }
