@@ -21,7 +21,7 @@ The following instructions assume that you have already built Meringue according
 example fuzzing campaign run:
 
 ```
-mvn -fmeringue-example -P<FRAMEWORK>,<SUBJECT> [-Dmeringue.duration=<X>] [-Dmeringue.debug] verify
+mvn -fmeringue-examples -P<FRAMEWORK>,<SUBJECT> [-Dmeringue.duration=<X>] [-Dmeringue.debug] verify
 ```
 
 Where:
@@ -32,6 +32,8 @@ Where:
   e.g., 2 days, 3 hours and 4 minutes is "P2DT3H4M"). The default value is one day.
 * The presence of -Dmeringue.debug indicates that forked analysis JVMs should suspend and wait for a debugger to attach.
   By default, forked analysis JVMs do not suspend and wait for a debugger to attach.
+
+When the fuzzing campaign has completed, Meringue will rerun the inputs that were saved during the campaign to produce a JaCoCo coverage report and a report listing observed failures.
 
 ## License
 
