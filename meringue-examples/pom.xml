@@ -136,8 +136,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
-                            <testMethod>testWithGenerator</testMethod>
-                            <framework>edu.neu.ccs.prl.meringue.ZestFramework</framework>
+                            <framework>edu.berkeley.cs.jqf.ZestFramework</framework>
                             <javaOptions>
                                 <option>-Djqf.ei.MAX_INPUT_SIZE=10240</option>
                                 <option>-ea</option>
@@ -201,6 +200,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <testClass>edu.neu.ccs.prl.meringue.RhinoTest</testClass>
                         </configuration>
                     </plugin>
@@ -223,6 +223,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <testClass>edu.neu.ccs.prl.meringue.AntTest</testClass>
                         </configuration>
                     </plugin>
@@ -245,6 +246,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <testClass>edu.neu.ccs.prl.meringue.BcelTest</testClass>
                         </configuration>
                     </plugin>
@@ -267,6 +269,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <testClass>edu.neu.ccs.prl.meringue.ClosureTest</testClass>
                         </configuration>
                     </plugin>
@@ -289,6 +292,7 @@
                         <groupId>edu.neu.ccs.prl.meringue</groupId>
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
+                            <testMethod>testWithGenerator</testMethod>
                             <testClass>edu.neu.ccs.prl.meringue.MavenTest</testClass>
                         </configuration>
                     </plugin>

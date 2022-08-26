@@ -1,10 +1,11 @@
-package edu.neu.ccs.prl.meringue;
+package edu.berkeley.cs.jqf;
 
 import edu.berkeley.cs.jqf.fuzz.guidance.Guidance;
 import edu.berkeley.cs.jqf.fuzz.guidance.GuidanceException;
 import edu.berkeley.cs.jqf.fuzz.guidance.Result;
-import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
 import edu.berkeley.cs.jqf.instrument.tracing.events.TraceEvent;
+import edu.neu.ccs.prl.meringue.Replayer;
+import org.junit.runners.model.MultipleFailureException;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -27,7 +28,11 @@ public final class ZestReplayer implements Replayer {
     @Override
     public Throwable execute(byte[] input) {
         ReplayGuidance guidance = new ReplayGuidance(input);
-        GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);
+        try {
+            ZestForkMain.run(testClass, testMethodName, guidance);
+        } catch (MultipleFailureException e) {
+            // Suppress test failure
+        }
         return guidance.error;
     }
 

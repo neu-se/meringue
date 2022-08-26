@@ -1,5 +1,6 @@
-package edu.neu.ccs.prl.meringue;
+package edu.berkeley.cs.jqf;
 
+import edu.neu.ccs.prl.meringue.*;
 import janala.instrument.SnoopInstructionTransformer;
 import org.objectweb.asm.ClassVisitor;
 
@@ -27,7 +28,7 @@ public class ZestFramework implements FuzzFramework {
         File instrumentJar = FileUtil.getClassPathElement(SnoopInstructionTransformer.class);
         File asmJar = FileUtil.getClassPathElement(ClassVisitor.class);
         javaOptions.add(String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(),
-                asmJar.getAbsolutePath()));
+                                      asmJar.getAbsolutePath()));
         javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
         javaOptions.add("-cp");
         String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
@@ -40,7 +41,7 @@ public class ZestFramework implements FuzzFramework {
                 outputDir.getAbsolutePath()
         };
         launcher = new JvmLauncher.JavaMainLauncher(config.getJavaExec(), ZestForkMain.class.getName(),
-                javaOptions.toArray(new String[0]), true, arguments);
+                                                    javaOptions.toArray(new String[0]), true, arguments);
     }
 
     @Override
@@ -69,7 +70,7 @@ public class ZestFramework implements FuzzFramework {
     @Override
     public Collection<File> getRequiredClassPathElements() {
         return Stream.of(ZestFramework.class, FuzzFramework.class)
-                .map(FileUtil::getClassPathElement)
-                .collect(Collectors.toList());
+                     .map(FileUtil::getClassPathElement)
+                     .collect(Collectors.toList());
     }
 }
