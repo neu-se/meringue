@@ -4,6 +4,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.jacoco.core.tools.ExecFileLoader;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 
 final class CampaignReport {
@@ -34,14 +35,16 @@ final class CampaignReport {
         }
     }
 
-    public void write(File coverageFile, File failuresFile) throws FileNotFoundException {
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(coverageFile)))) {
-            out.printf("time, covered_branches (out of %d)%n", totalBranches);
+    public void write(File coverageFile, File failuresFile) throws IOException {
+        try (PrintStream out = new PrintStream(
+                new BufferedOutputStream(Files.newOutputStream(coverageFile.toPath())))) {
+            out.printf("time, covered_branches%n");
             for (long[] row : rows) {
                 out.printf("%d, %d%n", row[0], row[1]);
             }
         }
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(new FileOutputStream(failuresFile)))) {
+        try (PrintStream out = new PrintStream(
+                new BufferedOutputStream(Files.newOutputStream(failuresFile.toPath())))) {
             int i = 1;
             for (List<StackTraceElement> uniqueTrace : failureMap.keySet()) {
                 out.printf("%d. %s%n", i++, uniqueTrace);
@@ -54,7 +57,7 @@ final class CampaignReport {
 
     public void writeHtmlReport(String testDescription, File reportDir) throws IOException {
         calculator.createHtmlReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources,
-                reportDir);
+                                    reportDir);
     }
 
     public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {
@@ -63,7 +66,10 @@ final class CampaignReport {
         }
         long time = inputFile.lastModified() - firstTimestamp;
         lastExecData = (lastExecData == null) ? execData : mergeExecData(lastExecData, execData);
-        rows.add(new long[]{time, calculator.calculate(lastExecData)});
+        long coverage = calculator.calculate(lastExecData);
+        if (rows.isEmpty() || coverage > rows.get(rows.size() - 1)[1]) {
+            rows.add(new long[]{time, coverage});
+        }
         if (trace != null) {
             List<StackTraceElement> elements = Arrays.asList(trace);
             if (!failureMap.containsKey(elements)) {

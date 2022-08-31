@@ -38,20 +38,20 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
     /**
-     * List of class files to include in reports. May use wildcard
-     * characters (* and ?). By default, all files are included.
+     * List of class files to include in reports. May use wildcard characters (* and ?). By default, all files are
+     * included.
      */
     @Parameter
     private List<String> inclusions = new LinkedList<>();
     /**
-     * List of class files to exclude from reports. May use wildcard
-     * characters (* and ?). By default, no files are excluded.
+     * List of class files to exclude from reports. May use wildcard characters (* and ?). By default, no files are
+     * excluded.
      */
     @Parameter
     private List<String> exclusions = new LinkedList<>();
     /**
-     * Maximum number of frames to include in stack traces taken for failures.
-     * By default, a maximum of {@code 5} frames are included.
+     * Maximum number of frames to include in stack traces taken for failures. By default, a maximum of {@code 5} frames
+     * are included.
      */
     @Parameter(property = "meringue.maxTraceSize", defaultValue = "5")
     private int maxTraceSize;
@@ -61,8 +61,8 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter(property = "meringue.debug", defaultValue = "false")
     private boolean debug;
     /**
-     * Maximum amount of time in seconds to execute a single replayed input or {@code -1} if no timeout should be
-     * used. By default, a timeout value of {@code 600} seconds is used.
+     * Maximum amount of time in seconds to execute a single replayed input or {@code -1} if no timeout should be used.
+     * By default, a timeout value of {@code 600} seconds is used.
      */
     @Parameter(property = "meringue.timeout", defaultValue = "600")
     private long timeout;
@@ -97,7 +97,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             report.print(getLog());
             File configFile = new File(getOutputDir(), "config.txt");
             getLog().info("Writing configuration information to: " + configFile);
-            writeConfigurationInfo(config, configFile);
+            writeConfigurationInfo(config, configFile, calculator.getTotalBranches());
             File coverageReportFile = new File(getOutputDir(), "coverage.csv");
             File failuresReportFile = new File(getOutputDir(), "failures.txt");
             getLog().info("Writing coverage report to: " + coverageReportFile);
@@ -111,7 +111,8 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         }
     }
 
-    private void writeConfigurationInfo(CampaignConfiguration config, File file) throws IOException {
+    private void writeConfigurationInfo(CampaignConfiguration config, File file, long totalBranches)
+            throws IOException {
         try (PrintStream out = new PrintStream(new BufferedOutputStream(Files.newOutputStream(file.toPath())))) {
             out.printf("test_class_name: %s%n", config.getTestClassName());
             out.printf("test_method_name: %s%n", config.getTestMethodName());
@@ -122,6 +123,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             out.printf("java_options: %s%n",
                        String.join(" ", config.getJavaOptions()).replaceAll(System.getProperty("line.separator"), " "));
             out.printf("replay_timeout: %d%n", timeout);
+            out.printf("total_branches: %d%n", totalBranches);
         }
     }
 
@@ -142,19 +144,16 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     }
 
     private File[] getSources() {
-        Set<Artifact> artifacts = getProject().getArtifacts()
-                                              .stream()
-                                              .filter(a -> a.getArtifactHandler().isAddedToClasspath())
-                                              .collect(Collectors.toSet());
+        Set<Artifact> artifacts =
+                getProject().getArtifacts().stream().filter(a -> a.getArtifactHandler().isAddedToClasspath())
+                            .collect(Collectors.toSet());
         ArtifactTranslator translator = new ClassifierTypeTranslator(artifactHandlerManager, "sources", "");
         Collection<ArtifactCoordinate> coordinates = translator.translate(artifacts, getLog());
         Set<Artifact> testSources = resolve(new LinkedHashSet<>(coordinates));
         Set<File> sourceDirs = testSources.stream().map(Artifact::getFile).collect(Collectors.toSet());
         sourceDirs.add(new File(getProject().getBuild().getTestSourceDirectory()));
         sourceDirs.add(new File(getProject().getBuild().getSourceDirectory()));
-        return sourceDirs.stream()
-                         .filter(f -> f != null && f.exists())
-                         .toArray(File[]::new);
+        return sourceDirs.stream().filter(f -> f != null && f.exists()).toArray(File[]::new);
     }
 
     private Set<Artifact> resolve(Set<ArtifactCoordinate> coordinates) {
