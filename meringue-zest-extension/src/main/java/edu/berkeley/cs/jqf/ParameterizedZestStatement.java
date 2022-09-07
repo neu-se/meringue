@@ -1,5 +1,6 @@
 package edu.berkeley.cs.jqf;
 
+import com.pholser.junit.quickcheck.From;
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.generator.Generator;
 import com.pholser.junit.quickcheck.internal.ParameterTypeContext;
@@ -21,7 +22,9 @@ import org.junit.runners.parameterized.TestWithParameters;
 import java.io.EOFException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.LinkedList;
 import java.util.stream.Collectors;
 
 import static edu.berkeley.cs.jqf.fuzz.guidance.Result.*;
@@ -117,12 +120,13 @@ class ParameterizedZestStatement extends Statement {
                 new GeneratorRepository(randomness).register(new ServiceLoaderGeneratorSource());
         if (clazz.getAnnotatedFields(Parameterized.Parameter.class).isEmpty()) {
             Constructor<?> constructor = clazz.getOnlyConstructor();
-            return Arrays.stream(constructor.getParameters()).map(ParameterTypeContext::forParameter)
+            return Arrays.stream(constructor.getParameters())
+                         .map(x -> ParameterTypeContext.forParameter(x).annotate(x))
                          .map(x -> produceGenerator(generatorRepository, x)).collect(Collectors.toList());
         } else {
-            return getInjectedFields(clazz).stream().map(ParameterTypeContext::forField)
-                                           .map(x -> produceGenerator(generatorRepository, x))
-                                           .collect(Collectors.toList());
+            return getInjectedFields(clazz).stream()
+                .map(x -> ParameterTypeContext.forField(x).annotate(x))
+                .map(x -> produceGenerator(generatorRepository, x)).collect(Collectors.toList());
         }
     }
 
