@@ -49,16 +49,7 @@ public final class ZestForkMain {
         } else if (runnerClass.equals(Parameterized.class)) {
             ParameterizedZestRunner.run(testClass, testMethodName, guidance);
         } else if (runnerClass.equals(JUnitParamsRunner.class)) {
-            try {
-                //testClass = addJQFAnnotationToClass(testClass);
-                addJQFAnnotationToClass(testClass);
-            } catch (Exception e) {
-                System.out.println(e.toString());
-                throw new IllegalArgumentException("Unknown test class type:" + testClass);
-            }
-            RunWith annotation = testClass.getAnnotation(RunWith.class);
-            System.out.println(annotation.value().getSimpleName());
-            GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);
+            JUnitParamsZestRunner.run(testClass, testMethodName, guidance);
         } else {
             throw new IllegalArgumentException("Unknown test class runner type:" + runnerClass);
         }
@@ -70,24 +61,5 @@ public final class ZestForkMain {
         }
         RunWith annotation = testClass.getAnnotation(RunWith.class);
         return annotation.value();
-    }
-    
-    private static void addJQFAnnotationToClass (Class<?> testClass) throws NotFoundException,CannotCompileException {
-        ClassPool pool = ClassPool.getDefault();
-        CtClass ctClass = pool.makeClass(testClass.getName());
-
-        ClassFile classFile = ctClass.getClassFile();
-        ConstPool constpool = classFile.getConstPool();
-
-        AnnotationsAttribute annotationsAttribute = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-        Annotation annotation = new Annotation(RunWith.class.getName(), constpool);
-        annotation.addMemberValue("value()", new ClassMemberValue(JQF.class.getName(), classFile.getConstPool()));
-        annotationsAttribute.setAnnotation(annotation);
-
-        ctClass.getClassFile().addAttribute(annotationsAttribute);
-        //Class<?> ret = ctClass.toClass();
-        //System.out.println("GOODDDD");
-
-        //return ret;
     }
 }
