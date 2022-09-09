@@ -12,21 +12,6 @@ import org.junit.runner.Runner;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.Parameterized;
 import org.junit.runners.model.MultipleFailureException;
-import junitparams.JUnitParamsRunner;
-
-import javassist.NotFoundException;
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.ConstPool;
-import javassist.bytecode.MethodInfo;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.annotation.Annotation;
-import javassist.bytecode.annotation.BooleanMemberValue;
-import javassist.bytecode.annotation.ClassMemberValue;
 
 import java.io.File;
 
@@ -82,7 +67,8 @@ public final class ZestForkMain {
         try {
             return builder.produce(clazz, methodName, guidance);
         } catch (Throwable e) {
-            throw new IllegalArgumentException("Unable to create JUnit runner for test: " + clazz + " " + methodName, e);
+            throw new IllegalArgumentException("Unable to create JUnit runner for test: " + clazz + " " + methodName, 
+                                                e);
         }
     }
 }

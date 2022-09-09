@@ -11,20 +11,9 @@
     <artifactId>meringue-zest-extension</artifactId>
     <packaging>jar</packaging>
     <dependencies>
-        <!-- JUnitParamsRunner -->
-        <dependency>
-            <groupId>pl.pragmatists</groupId>
-            <artifactId>JUnitParams</artifactId>
-            <version>1.1.1</version>
-        </dependency>
         <dependency>
             <groupId>edu.neu.ccs.prl.meringue</groupId>
             <artifactId>meringue-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-            <version>3.21.0-GA</version>
         </dependency>
         <dependency>
             <groupId>edu.berkeley.cs.jqf</groupId>
