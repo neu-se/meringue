@@ -4,8 +4,12 @@ import edu.berkeley.cs.jqf.fuzz.JQF;
 import edu.berkeley.cs.jqf.fuzz.ei.ZestGuidance;
 import edu.berkeley.cs.jqf.fuzz.guidance.Guidance;
 import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
+import edu.berkeley.cs.jqf.instrument.tracing.SingleSnoop;
+import edu.berkeley.cs.jqf.instrument.tracing.TraceLogger;
+import junitparams.JUnitParamsRunner;
 import org.junit.runner.RunWith;
 import org.junit.runner.Runner;
+import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.Parameterized;
 import org.junit.runners.model.MultipleFailureException;
 import junitparams.JUnitParamsRunner;
@@ -47,19 +51,38 @@ public final class ZestForkMain {
         if (runnerClass.equals(JQF.class)) {
             GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);
         } else if (runnerClass.equals(Parameterized.class)) {
-            ParameterizedZestRunner.run(testClass, testMethodName, guidance);
+            run(ZestParameterizedRunner::new, testClass, testMethodName, guidance);
         } else if (runnerClass.equals(JUnitParamsRunner.class)) {
-            JUnitParamsZestRunner.run(testClass, testMethodName, guidance);
+            run(ZestJUnitParamsRunner::new, testClass, testMethodName, guidance);
         } else {
             throw new IllegalArgumentException("Unknown test class runner type:" + runnerClass);
         }
     }
 
-    private static Class<? extends Runner> getRunnerClass(Class<?> testClass) {
+    static Class<? extends Runner> getRunnerClass(Class<?> testClass) {
         if (!testClass.isAnnotationPresent(RunWith.class)) {
             throw new IllegalArgumentException("Test class must be annotated with RunWith: " + testClass);
         }
         RunWith annotation = testClass.getAnnotation(RunWith.class);
         return annotation.value();
+    }
+
+    static void run(ZestRunnerProducer builder, Class<?> clazz, String methodName, Guidance guidance) {
+        try {
+            Runner runner = build(builder, clazz, methodName, guidance);
+            SingleSnoop.setCallbackGenerator(guidance::generateCallBack);
+            SingleSnoop.startSnooping(clazz.getName() + "#" + methodName);
+            runner.run(new RunNotifier());
+        } finally {
+            TraceLogger.get().remove();
+        }
+    }
+
+    static Runner build(ZestRunnerProducer builder, Class<?> clazz, String methodName, Guidance guidance) {
+        try {
+            return builder.produce(clazz, methodName, guidance);
+        } catch (Throwable e) {
+            throw new IllegalArgumentException("Unable to create JUnit runner for test: " + clazz + " " + methodName, e);
+        }
     }
 }

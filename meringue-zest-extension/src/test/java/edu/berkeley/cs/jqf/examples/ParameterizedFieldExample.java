@@ -1,4 +1,4 @@
-package edu.berkeley.cs.jqf;
+package edu.berkeley.cs.jqf.examples;
 
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -11,7 +11,7 @@ import java.util.List;
 
 @RunWith(Parameterized.class)
 @SuppressWarnings("all")
-public class FieldParamExample {
+public class ParameterizedFieldExample {
     public static final List<String> values = new LinkedList<>();
     @Parameterized.Parameter(value = 1)
     public int param1;
