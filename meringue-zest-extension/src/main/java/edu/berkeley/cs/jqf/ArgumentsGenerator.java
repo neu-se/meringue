@@ -28,11 +28,11 @@ public class ArgumentsGenerator {
     private final List<Generator<?>> generators;
 
     public ArgumentsGenerator(List<Field> fields, long seed) {
-        this(fields.stream().map(ParameterTypeContext::forField), seed);
+        this(fields.stream().map(f -> ParameterTypeContext.forField(f).annotate(f)), seed);
     }
 
     public ArgumentsGenerator(Executable executable, long seed) {
-        this(Arrays.stream(executable.getParameters()).map(ParameterTypeContext::forParameter), seed);
+        this(Arrays.stream(executable.getParameters()).map(p -> ParameterTypeContext.forParameter(p).annotate(p)), seed);
     }
 
     private ArgumentsGenerator(Stream<ParameterTypeContext> contexts, long seed) {
