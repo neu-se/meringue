@@ -1,4 +1,4 @@
-package edu.neu.ccs.prl.meringue;
+package edu.neu.ccs.prl.meringue.param;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

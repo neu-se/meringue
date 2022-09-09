@@ -1,4 +1,4 @@
-package edu.berkeley.cs.jqf;
+package edu.neu.ccs.prl.meringue.param;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -8,19 +8,20 @@ import java.util.Arrays;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("all")
-public class ConstructorParamExample {
+public class ConstructorParamTest {
     public final int param1;
     public final long param2;
 
-    public ConstructorParamExample(int param1, long param2) {
+    public ConstructorParamTest(int param1, long param2) {
         this.param1 = param1;
         this.param2 = param2;
     }
 
     @Test
-    public void test1() {
-        System.out.println((param1 == 42) ? param2 : "Hello world");
+    public void test() {
+        if (param2 == param1) {
+            throw new IllegalStateException();
+        }
     }
 
     @Test
