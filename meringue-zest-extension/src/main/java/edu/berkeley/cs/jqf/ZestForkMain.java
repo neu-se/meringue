@@ -68,7 +68,7 @@ public final class ZestForkMain {
             return builder.produce(clazz, methodName, guidance);
         } catch (Throwable e) {
             throw new IllegalArgumentException("Unable to create JUnit runner for test: " + clazz + " " + methodName, 
-                                                e);
+                                               e);
         }
     }
 }
