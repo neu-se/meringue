@@ -1,5 +1,6 @@
 package edu.berkeley.cs.jqf.examples;
 
+import com.pholser.junit.quickcheck.From;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.*;
@@ -29,6 +30,15 @@ public class JUnitParamsExample {
         values.add("t");
         if (param1 == 42 && param2) {
             throw new IllegalStateException();
+        }
+    }
+
+
+    @Test
+    @Parameters({"hi", "j"})
+    public void testWithGenerator(@From(MyStringGenerator.class) String s) {
+        if (s.equals("hello")) {
+            throw new IllegalArgumentException();
         }
     }
 
