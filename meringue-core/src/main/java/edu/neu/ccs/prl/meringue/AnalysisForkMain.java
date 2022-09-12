@@ -8,7 +8,7 @@ import java.nio.file.Files;
 public final class AnalysisForkMain {
     private AnalysisForkMain() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                "not be instantiated");
+                                         "not be instantiated");
     }
 
     public static void main(String[] args) throws Throwable {
@@ -19,14 +19,14 @@ public final class AnalysisForkMain {
         int port = Integer.parseInt(args[4]);
         StackTraceCleaner cleaner = new StackTraceCleaner(maxTraceSize);
         Replayer replayer = (Replayer) Class.forName(replayerClassName)
-                .getDeclaredConstructor()
-                .newInstance();
+                                            .getDeclaredConstructor()
+                                            .newInstance();
         replayer.configure(testClassName, testMethodName, AnalysisForkMain.class.getClassLoader());
         // Open the loopback connection
         try (ForkConnection connection = new ForkConnection(port)) {
-            for(;;) {
+            for (; ; ) {
                 File inputFile = connection.receive(File.class);
-                if(inputFile == null) {
+                if (inputFile == null) {
                     return;
                 }
                 // Read the input
@@ -34,7 +34,7 @@ public final class AnalysisForkMain {
                 // Reset the JaCoCo coverage
                 RT.getAgent().reset();
                 // Execute the test
-                Throwable result = replayer.execute(input);
+                Throwable result = replayer.execute(input, inputFile);
                 // Send current JaCoCo coverage
                 connection.send(RT.getAgent().getExecutionData(false));
                 if (result == null) {

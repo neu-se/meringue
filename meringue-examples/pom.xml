@@ -160,6 +160,7 @@
                                 <option>-ea</option>
                                 <option>-Xmx8g</option>
                                 <option>-Djanala.conf=${project.build.testOutputDirectory}/janala.conf</option>
+                                <option>-Djqf.repro.dumpArgsDir=${project.build.directory}/zest-arguments</option>
                             </javaOptions>
                         </configuration>
                     </plugin>
