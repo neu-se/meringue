@@ -155,12 +155,14 @@
                         <artifactId>meringue-maven-plugin</artifactId>
                         <configuration>
                             <framework>edu.berkeley.cs.jqf.ZestFramework</framework>
+                            <frameworkArguments>
+                                <argumentsDir>${project.build.directory}/zest-args</argumentsDir>
+                            </frameworkArguments>
                             <javaOptions>
                                 <option>-Djqf.ei.MAX_INPUT_SIZE=10240</option>
                                 <option>-ea</option>
                                 <option>-Xmx8g</option>
                                 <option>-Djanala.conf=${project.build.testOutputDirectory}/janala.conf</option>
-                                <option>-Djqf.repro.dumpArgsDir=${project.build.directory}/zest-arguments</option>
                             </javaOptions>
                         </configuration>
                     </plugin>

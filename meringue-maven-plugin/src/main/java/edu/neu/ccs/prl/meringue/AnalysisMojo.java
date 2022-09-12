@@ -128,8 +128,9 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     }
 
     private JvmLauncher createLauncher(CampaignConfiguration config, FuzzFramework framework, CoverageFilter filter)
-            throws MojoExecutionException, ReflectiveOperationException {
+            throws MojoExecutionException, ReflectiveOperationException, IOException {
         List<String> options = new LinkedList<>(config.getJavaOptions());
+        options.addAll(framework.prepareForAnalysisPhase());
         if (debug) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }

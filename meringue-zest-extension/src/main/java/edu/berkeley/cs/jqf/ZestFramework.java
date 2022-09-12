@@ -6,10 +6,7 @@ import org.objectweb.asm.ClassVisitor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,6 +15,7 @@ public class ZestFramework implements FuzzFramework {
     private File corpusDir;
     private File failuresDir;
     private JvmLauncher launcher;
+    private String argumentsDirPath;
 
     @Override
     public void initialize(CampaignConfiguration config, Properties frameworkArguments) {
@@ -40,6 +38,10 @@ public class ZestFramework implements FuzzFramework {
                 config.getTestMethodName(),
                 outputDir.getAbsolutePath()
         };
+        this.argumentsDirPath = System.getProperty("zest.argumentsDir");
+        if (argumentsDirPath == null) {
+            argumentsDirPath = frameworkArguments.getProperty("argumentsDir");
+        }
         launcher = new JvmLauncher.JavaMainLauncher(config.getJavaExec(), ZestForkMain.class.getName(),
                                                     javaOptions.toArray(new String[0]), true, arguments);
     }
@@ -72,5 +74,14 @@ public class ZestFramework implements FuzzFramework {
         return Stream.of(ZestFramework.class, FuzzFramework.class)
                      .map(FileUtil::getClassPathElement)
                      .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> prepareForAnalysisPhase() throws IOException {
+        if (argumentsDirPath != null) {
+            FileUtil.createOrCleanDirectory(new File(argumentsDirPath));
+            return Collections.singletonList("-Dzest.argumentsDir=" + argumentsDirPath);
+        }
+        return Collections.emptyList();
     }
 }

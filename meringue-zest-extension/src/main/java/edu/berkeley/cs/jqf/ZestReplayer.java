@@ -4,7 +4,6 @@ import edu.berkeley.cs.jqf.fuzz.guidance.Guidance;
 import edu.berkeley.cs.jqf.fuzz.guidance.GuidanceException;
 import edu.berkeley.cs.jqf.fuzz.guidance.Result;
 import edu.berkeley.cs.jqf.instrument.tracing.events.TraceEvent;
-import edu.neu.ccs.prl.meringue.FileUtil;
 import edu.neu.ccs.prl.meringue.Replayer;
 import org.junit.runners.model.MultipleFailureException;
 
@@ -12,19 +11,14 @@ import java.io.*;
 import java.util.function.Consumer;
 
 public final class ZestReplayer implements Replayer {
-    private File argumentsDirectory;
+    private File argumentsDir;
     private Class<?> testClass;
     private String testMethodName;
 
     public ZestReplayer() {
-        try {
-            String argumentsDirectoryPath = System.getProperty("jqf.repro.dumpArgsDir");
-            if (argumentsDirectoryPath != null) {
-                argumentsDirectory = new File(argumentsDirectoryPath);
-                FileUtil.createOrCleanDirectory(argumentsDirectory);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        String argumentsDirPath = System.getProperty("zest.argumentsDir");
+        if (argumentsDirPath != null) {
+            argumentsDir = new File(argumentsDirPath);
         }
     }
 
@@ -45,7 +39,7 @@ public final class ZestReplayer implements Replayer {
 
     @Override
     public Throwable execute(byte[] input, File inputFile) {
-        ReplayGuidance guidance = new ReplayGuidance(input, inputFile, inputFile == null ? null : argumentsDirectory);
+        ReplayGuidance guidance = new ReplayGuidance(input, inputFile, inputFile == null ? null : argumentsDir);
         try {
             ZestForkMain.run(testClass, testMethodName, guidance);
         } catch (MultipleFailureException e) {
