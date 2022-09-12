@@ -131,6 +131,8 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             throws MojoExecutionException, ReflectiveOperationException, IOException {
         List<String> options = new LinkedList<>(config.getJavaOptions());
         options.addAll(framework.prepareForAnalysisPhase());
+        // Set property to indicate that the analysis phase is running
+        options.add("-Dmeringue.analysis=true");
         if (debug) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
