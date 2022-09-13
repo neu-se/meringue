@@ -60,6 +60,16 @@ final class CampaignReport {
                                     reportDir);
     }
 
+    public void writeCsvReport(String testDescription, File reportDir) throws IOException {
+        calculator.createCsvReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources,
+                                    reportDir);
+    }
+
+    public void writeXmlReport(String testDescription, File reportDir) throws IOException {
+        calculator.createXmlReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources,
+                                    reportDir);
+    }
+
     public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {
         if (firstTimestamp == -1) {
             firstTimestamp = inputFile.lastModified();

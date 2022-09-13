@@ -106,6 +106,8 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             File htmlReportDir = new File(getOutputDir(), "jacoco-report");
             getLog().info("Writing JaCoCo report to: " + htmlReportDir);
             report.writeHtmlReport(getTestDescription(), htmlReportDir);
+            report.writeCsvReport(getTestDescription(), htmlReportDir);
+            report.writeXmlReport(getTestDescription(), htmlReportDir);
         } catch (IOException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
         }

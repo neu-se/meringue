@@ -12,6 +12,8 @@ import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.*;
 import org.jacoco.report.html.HTMLFormatter;
+import org.jacoco.report.xml.XMLFormatter;
+import org.jacoco.report.csv.CSVFormatter;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
@@ -78,6 +80,38 @@ class CoverageCalculator {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
         IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
+        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
+        visitor.visitEnd();
+    }
+
+    public void createXmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
+            throws IOException {
+        ExecFileLoader loader = new ExecFileLoader();
+        loader.load(new ByteArrayInputStream(execData));
+        CoverageBuilder builder = new CoverageBuilder();
+        Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
+        for (Long key : idBufferMap.keySet()) {
+            analyzer.analyzeClass(idBufferMap.get(key), "");
+        }
+        IReportVisitor visitor = new XMLFormatter().createVisitor(new FileOutputStream(
+                    new File(reportDir, "jacoco.xml")));
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
+        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
+        visitor.visitEnd();
+    }
+
+    public void createCsvReport(byte[] execData, String testDesc, File[] sources, File reportDir)
+            throws IOException {
+        ExecFileLoader loader = new ExecFileLoader();
+        loader.load(new ByteArrayInputStream(execData));
+        CoverageBuilder builder = new CoverageBuilder();
+        Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
+        for (Long key : idBufferMap.keySet()) {
+            analyzer.analyzeClass(idBufferMap.get(key), "");
+        }
+        IReportVisitor visitor = new CSVFormatter().createVisitor(new FileOutputStream(
+                    new File(reportDir, "jacoco.csv")));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
         visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
         visitor.visitEnd();
