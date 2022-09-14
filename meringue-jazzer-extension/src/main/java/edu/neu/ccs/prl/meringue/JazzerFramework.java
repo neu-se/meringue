@@ -105,7 +105,11 @@ public final class JazzerFramework implements FuzzFramework {
         FileUtil.ensureDirectory(corpusDir);
         FileUtil.ensureDirectory(reproducerDir);
         FileUtil.ensureDirectory(workingDir);
-        return ProcessUtil.start(builder, !quiet);
+        if (!quiet) {
+            return ProcessUtil.start(builder, true);
+        } else {
+            return builder.redirectError(logFile).redirectOutput(logFile).start();
+        }
     }
 
     private static File getJazzerExecutable(File outputDir) throws IOException {
