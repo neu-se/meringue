@@ -70,7 +70,7 @@ class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createHtmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
+    public void createReport(byte[] execData, String testDesc, File[] sources, IReportVisitor visitor)
             throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
@@ -79,39 +79,6 @@ class CoverageCalculator {
         for (Long key : idBufferMap.keySet()) {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
-        IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
-        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
-        visitor.visitEnd();
-    }
-
-    public void createXmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
-            throws IOException {
-        ExecFileLoader loader = new ExecFileLoader();
-        loader.load(new ByteArrayInputStream(execData));
-        CoverageBuilder builder = new CoverageBuilder();
-        Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
-        for (Long key : idBufferMap.keySet()) {
-            analyzer.analyzeClass(idBufferMap.get(key), "");
-        }
-        IReportVisitor visitor = new XMLFormatter().createVisitor(new FileOutputStream(
-                    new File(reportDir, "jacoco.xml")));
-        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
-        visitor.visitEnd();
-    }
-
-    public void createCsvReport(byte[] execData, String testDesc, File[] sources, File reportDir)
-            throws IOException {
-        ExecFileLoader loader = new ExecFileLoader();
-        loader.load(new ByteArrayInputStream(execData));
-        CoverageBuilder builder = new CoverageBuilder();
-        Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
-        for (Long key : idBufferMap.keySet()) {
-            analyzer.analyzeClass(idBufferMap.get(key), "");
-        }
-        IReportVisitor visitor = new CSVFormatter().createVisitor(new FileOutputStream(
-                    new File(reportDir, "jacoco.csv")));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
         visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
         visitor.visitEnd();
