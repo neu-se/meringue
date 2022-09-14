@@ -10,11 +10,16 @@ import org.jacoco.core.internal.data.CRC64;
 import org.jacoco.core.internal.instr.InstrSupport;
 import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
-import org.jacoco.report.*;
-import org.jacoco.report.html.HTMLFormatter;
+import org.jacoco.report.DirectorySourceFileLocator;
+import org.jacoco.report.IReportVisitor;
+import org.jacoco.report.ISourceFileLocator;
+import org.jacoco.report.MultiSourceFileLocator;
 import org.objectweb.asm.ClassReader;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -68,7 +73,7 @@ class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createHtmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
+    public void createReport(byte[] execData, String testDesc, File[] sources, IReportVisitor visitor)
             throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
@@ -77,7 +82,6 @@ class CoverageCalculator {
         for (Long key : idBufferMap.keySet()) {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
-        IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
         visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
         visitor.visitEnd();
@@ -113,8 +117,8 @@ class CoverageCalculator {
         try (ZipFile archive = new ZipFile(source)) {
             // Sort the entries to ensure that parents are created before children
             List<? extends ZipEntry> entries = archive.stream()
-                    .sorted(Comparator.comparing(ZipEntry::getName))
-                    .collect(Collectors.toList());
+                                                      .sorted(Comparator.comparing(ZipEntry::getName))
+                                                      .collect(Collectors.toList());
             for (ZipEntry entry : entries) {
                 Path entryDest = destination.resolve(entry.getName());
                 if (entry.isDirectory()) {
@@ -146,7 +150,7 @@ class CoverageCalculator {
             if (file.isDirectory()) {
                 return super.analyzeAll(file);
             } else {
-                try (InputStream in = new FileInputStream(file)) {
+                try (InputStream in = Files.newInputStream(file.toPath())) {
                     return analyzeAll(in, file.getPath());
                 } catch (IOException e) {
                     // Suppress the exception so that other classes are still analyzed

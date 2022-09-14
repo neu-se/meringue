@@ -51,12 +51,14 @@ public class AnalysisRunner {
         this.testClassPathElements = new HashSet<>(testClassPathElements);
     }
 
-    public void run(CampaignConfiguration configuration, String frameworkName, Properties frameworkArguments)
-            throws MojoExecutionException {
-        run(configuration, AbstractMeringueMojo.createFramework(configuration, frameworkName, frameworkArguments));
+    public void run(CampaignConfiguration configuration, String frameworkName, Properties frameworkArguments,
+                    List<JacocoReportFormat> formats) throws MojoExecutionException {
+        run(configuration, AbstractMeringueMojo.createFramework(configuration, frameworkName, frameworkArguments),
+            formats);
     }
 
-    private void run(CampaignConfiguration configuration, FuzzFramework framework) throws MojoExecutionException {
+    private void run(CampaignConfiguration configuration, FuzzFramework framework, List<JacocoReportFormat> formats)
+            throws MojoExecutionException {
         log.info("Running analysis for: " + configuration.getTestDescription());
         try {
             File[] inputFiles = collectInputFiles(framework);
@@ -87,9 +89,12 @@ public class AnalysisRunner {
             log.info("Writing coverage report to: " + coverageReportFile);
             log.info("Writing failures report to: " + failuresReportFile);
             report.write(coverageReportFile, failuresReportFile);
-            File htmlReportDir = new File(outputDirectory, "jacoco-report");
-            log.info("Writing JaCoCo report to: " + htmlReportDir);
-            report.writeHtmlReport(configuration.getTestDescription(), htmlReportDir);
+            File reportDirectory = new File(outputDirectory, "jacoco");
+            FileUtil.ensureEmptyDirectory(reportDirectory);
+            log.info("Writing JaCoCo reports to: " + reportDirectory);
+            for (JacocoReportFormat f : formats) {
+                report.writeReport(configuration.getTestDescription(), reportDirectory, f);
+            }
         } catch (IOException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
         }
@@ -110,7 +115,6 @@ public class AnalysisRunner {
             out.printf("total_branches: %d%n", totalBranches);
         }
     }
-
 
     private static JvmLauncher createAnalysisLauncher(CampaignConfiguration config, FuzzFramework framework,
                                                       CoverageFilter filter, boolean debug, boolean verbose,

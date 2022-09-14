@@ -23,21 +23,21 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     protected MavenSession session;
     /**
-     * List of JARs, directories, and files to be included in the reports.
+     * List of JARs, directories, and files to be included in JaCoCo reports.
      */
     @Parameter
     List<File> includedClassPathElements = new LinkedList<>();
     /**
-     * List of class files to include in reports. May use wildcard characters (* and ?). By default, all files are
-     * included.
+     * List of class files to include in JaCoCo reports. May use wildcard characters (* and ?). By default, all files
+     * are included.
      */
     @Parameter
     private List<String> inclusions = new LinkedList<>();
     /**
-     * List of class files to exclude from reports. May use wildcard characters (* and ?). By default, no files are
-     * excluded.
+     * List of class files to exclude from JaCoCo reports. May use wildcard characters (* and ?). By default, no files
+     * are excluded.
      */
-    @Parameter
+    @Parameter(property = "meringue.exclusions", defaultValue = "HTML,CSV,XML")
     private List<String> exclusions = new LinkedList<>();
     /**
      * Maximum number of frames to include in stack traces taken for failures. By default, a maximum of {@code 5} frames
@@ -58,10 +58,16 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     private long timeout;
     /**
      * True if the standard output and error of the forked analysis JVMs should be redirected to the standard out and
-     * error of the Maven process. Otherwise, the standard output and error of the forked analysis JVMs is discarded.
+     * error of the Maven process. By default, the standard output and error of the forked analysis JVMs is discarded.
      */
     @Parameter(property = "meringue.verbose", defaultValue = "false")
     private boolean verbose;
+    /**
+     * List of JaCoCo report formats to be generated. Available values are {@code XML}, {@code HTML}, and {@code CSV}.
+     * By default, all formats are generated.
+     */
+    @Parameter(property = "meringue.jacocoFormats", defaultValue = "HTML,CSV,XML")
+    private List<JacocoReportFormat> jacocoFormats;
     @Component
     private ArtifactResolver artifactResolver;
     @Component
@@ -72,9 +78,9 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         initialize();
         SourcesResolver resolver = new SourcesResolver(getLog(), session, artifactResolver, artifactHandlerManager);
         CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
-        AnalysisRunner runner = new AnalysisRunner(resolver, getLog(), debug, verbose, Duration.ofMillis(timeout),
-                                                   maxTraceSize, filter, getOutputDir(),
-                                                   getLibraryDirectory(), getProject(), getTestClassPathElements());
-        runner.run(createConfiguration(), getFramework(), getFrameworkArguments());
+        AnalysisRunner runner =
+                new AnalysisRunner(resolver, getLog(), debug, verbose, Duration.ofMillis(timeout), maxTraceSize, filter,
+                                   getOutputDir(), getLibraryDirectory(), getProject(), getTestClassPathElements());
+        runner.run(createConfiguration(), getFramework(), getFrameworkArguments(), jacocoFormats);
     }
 }
