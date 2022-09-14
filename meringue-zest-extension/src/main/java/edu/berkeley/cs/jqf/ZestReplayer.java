@@ -8,9 +8,11 @@ import edu.neu.ccs.prl.meringue.Replayer;
 import org.junit.runners.model.MultipleFailureException;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.function.Consumer;
 
 public final class ZestReplayer implements Replayer {
+    private static int maxRecurDepth = 5;
     private File argumentsDir;
     private Class<?> testClass;
     private String testMethodName;
@@ -77,14 +79,25 @@ public final class ZestReplayer implements Replayer {
         public void observeGeneratedArgs(Object[] args) {
             if (argumentsDirectory != null) {
                 try {
-                    for (int i = 0; i < args.length; i++) {
-                        File file = new File(argumentsDirectory, String.format("%s.%d", inputFile.getName(), i));
-                        try (PrintWriter out = new PrintWriter(file)) {
-                            out.print(args[i]);
-                        }
-                    }
+                    System.out.println(inputFile.getName());
+                    observeGeneratedArgs(args, inputFile.getName(), 0);
                 } catch (IOException e) {
                     e.printStackTrace();
+                }
+            }
+        }
+
+        private void observeGeneratedArgs(Object args, String fileName, int depth) throws IOException {
+            if (args.getClass().isArray() && depth < maxRecurDepth) {
+                File file = new File(argumentsDirectory, fileName);
+                file.mkdirs();
+                for (int i = 0; i < Array.getLength(args); i++) {
+                    observeGeneratedArgs(Array.get(args, i), fileName + String.format("/%d", i), depth + 1);
+                }
+            } else {
+                File file = new File(argumentsDirectory, fileName);
+                try (PrintWriter out = new PrintWriter(file)) {
+                    out.print(args);
                 }
             }
         }
