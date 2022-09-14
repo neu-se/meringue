@@ -1,11 +1,14 @@
 package edu.neu.ccs.prl.meringue;
 
-import org.jacoco.report.*;
+import org.jacoco.report.FileMultiReportOutput;
+import org.jacoco.report.IReportVisitor;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 import org.jacoco.report.csv.CSVFormatter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.FileOutputStream;
 
 public enum ReportFormat {
     HTML() {

@@ -70,7 +70,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      * The output formats of JaCoCo report. Available values are {@code XML}, {@code HTML}, and {@code CSV}.
      * By default, the format is set to {@code HTML,CSV,XML}.
      */
-    @Parameter(property = "meringue.outputFormat", defaultValue = "HTML,CSV,XML")
+    @Parameter(property = "meringue.outputJaCoCoFormat", defaultValue = "HTML,CSV,XML")
     private List<ReportFormat> formats;
 
     @Component
