@@ -54,7 +54,7 @@ final class CampaignReport {
             }
         }
     }
-    
+
     public void writeReport(String testDescription, File reportDir, ReportFormat f) throws IOException {
         calculator.createReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources, f.createVisitor(reportDir));
     }

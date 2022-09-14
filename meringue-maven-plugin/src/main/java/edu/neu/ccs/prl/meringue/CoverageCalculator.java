@@ -11,9 +11,6 @@ import org.jacoco.core.internal.instr.InstrSupport;
 import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.*;
-import org.jacoco.report.html.HTMLFormatter;
-import org.jacoco.report.xml.XMLFormatter;
-import org.jacoco.report.csv.CSVFormatter;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
