@@ -11,7 +11,6 @@ import org.jacoco.core.internal.instr.InstrSupport;
 import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.*;
-import org.jacoco.report.html.HTMLFormatter;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
@@ -68,7 +67,7 @@ class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createHtmlReport(byte[] execData, String testDesc, File[] sources, File reportDir)
+    public void createReport(byte[] execData, String testDesc, File[] sources, IReportVisitor visitor)
             throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
@@ -77,7 +76,6 @@ class CoverageCalculator {
         for (Long key : idBufferMap.keySet()) {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
-        IReportVisitor visitor = new HTMLFormatter().createVisitor(new FileMultiReportOutput(reportDir));
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
         visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
         visitor.visitEnd();

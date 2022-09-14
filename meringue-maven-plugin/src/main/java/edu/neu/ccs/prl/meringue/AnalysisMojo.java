@@ -66,6 +66,13 @@ public class AnalysisMojo extends AbstractMeringueMojo {
      */
     @Parameter(property = "meringue.timeout", defaultValue = "600")
     private long timeout;
+    /**
+     * The output formats of JaCoCo report. Available values are {@code XML}, {@code HTML}, and {@code CSV}.
+     * By default, the format is set to {@code HTML,CSV,XML}.
+     */
+    @Parameter(property = "meringue.outputJaCoCoFormat", defaultValue = "HTML,CSV,XML")
+    private List<ReportFormat> formats;
+
     @Component
     private ArtifactResolver artifactResolver;
     @Component
@@ -103,9 +110,12 @@ public class AnalysisMojo extends AbstractMeringueMojo {
             getLog().info("Writing coverage report to: " + coverageReportFile);
             getLog().info("Writing failures report to: " + failuresReportFile);
             report.write(coverageReportFile, failuresReportFile);
-            File htmlReportDir = new File(getOutputDir(), "jacoco-report");
-            getLog().info("Writing JaCoCo report to: " + htmlReportDir);
-            report.writeHtmlReport(getTestDescription(), htmlReportDir);
+            File reportDir = new File(getOutputDir(), "jacoco-report");
+            getLog().info("Writing JaCoCo report to: " + reportDir);
+            reportDir.mkdirs();
+            for (ReportFormat f: formats) {
+                report.writeReport(getTestDescription(), reportDir, f);
+            }
         } catch (IOException | ReflectiveOperationException e) {
             throw new MojoExecutionException("Failed to analyze fuzzing campaign", e);
         }
