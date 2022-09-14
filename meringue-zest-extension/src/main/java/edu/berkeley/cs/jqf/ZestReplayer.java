@@ -79,7 +79,6 @@ public final class ZestReplayer implements Replayer {
         public void observeGeneratedArgs(Object[] args) {
             if (argumentsDirectory != null) {
                 try {
-                    System.out.println(inputFile.getName());
                     observeGeneratedArgs(args, inputFile.getName(), 0);
                 } catch (IOException e) {
                     e.printStackTrace();
