@@ -12,7 +12,6 @@ import java.lang.reflect.Array;
 import java.util.function.Consumer;
 
 public final class ZestReplayer implements Replayer {
-    private static int maxRecurDepth = 5;
     private File argumentsDir;
     private Class<?> testClass;
     private String testMethodName;
@@ -87,7 +86,7 @@ public final class ZestReplayer implements Replayer {
         }
 
         private void observeGeneratedArgs(Object args, String fileName, int depth) throws IOException {
-            if (args.getClass().isArray() && depth < maxRecurDepth) {
+            if (args.getClass().isArray()) {
                 File file = new File(argumentsDirectory, fileName);
                 file.mkdirs();
                 for (int i = 0; i < Array.getLength(args); i++) {
