@@ -1,5 +1,6 @@
 package edu.berkeley.cs.jqf;
 
+import edu.berkeley.cs.jqf.replay.ZestReplayer;
 import edu.neu.ccs.prl.meringue.*;
 import janala.instrument.SnoopInstructionTransformer;
 import org.objectweb.asm.ClassVisitor;
