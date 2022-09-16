@@ -31,7 +31,7 @@ public final class ZestForkMain {
         run(testClass, testMethodName, guidance);
     }
 
-    static void run(Class<?> testClass, String testMethodName, Guidance guidance) throws MultipleFailureException {
+    public static void run(Class<?> testClass, String testMethodName, Guidance guidance) throws MultipleFailureException {
         Class<? extends Runner> runnerClass = getRunnerClass(testClass);
         if (runnerClass.equals(JQF.class)) {
             GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);

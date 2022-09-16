@@ -6,9 +6,5 @@ public interface Replayer {
     void configure(String testClassName, String testMethodName, ClassLoader classLoader)
             throws ReflectiveOperationException;
 
-    Throwable execute(byte[] input);
-
-    default Throwable execute(byte[] input, File inputFile) {
-        return execute(input);
-    }
+    Throwable execute(byte[] input, File inputFile);
 }

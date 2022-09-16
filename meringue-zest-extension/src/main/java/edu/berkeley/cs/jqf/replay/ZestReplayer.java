@@ -1,5 +1,6 @@
-package edu.berkeley.cs.jqf;
+package edu.berkeley.cs.jqf.replay;
 
+import edu.berkeley.cs.jqf.ZestForkMain;
 import edu.berkeley.cs.jqf.fuzz.guidance.Guidance;
 import edu.berkeley.cs.jqf.fuzz.guidance.GuidanceException;
 import edu.berkeley.cs.jqf.fuzz.guidance.Result;
@@ -7,19 +8,21 @@ import edu.berkeley.cs.jqf.instrument.tracing.events.TraceEvent;
 import edu.neu.ccs.prl.meringue.Replayer;
 import org.junit.runners.model.MultipleFailureException;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.function.Consumer;
 
 public final class ZestReplayer implements Replayer {
-    private File argumentsDir;
+    private final ArgumentsWriter writer;
     private Class<?> testClass;
     private String testMethodName;
 
-    public ZestReplayer() {
-        String argumentsDirPath = System.getProperty("zest.argumentsDir");
-        if (argumentsDirPath != null) {
-            argumentsDir = new File(argumentsDirPath);
-        }
+    public ZestReplayer() throws IOException {
+        String path = System.getProperty("zest.argumentsDir");
+        writer = path == null ? (a, f) -> {
+        } : new FileArgumentsWriter(new File(path));
     }
 
     @Override
@@ -33,13 +36,8 @@ public final class ZestReplayer implements Replayer {
     }
 
     @Override
-    public Throwable execute(byte[] input) {
-        return execute(input, null);
-    }
-
-    @Override
     public Throwable execute(byte[] input, File inputFile) {
-        ReplayGuidance guidance = new ReplayGuidance(input, inputFile, inputFile == null ? null : argumentsDir);
+        ReplayGuidance guidance = new ReplayGuidance(input, inputFile, writer);
         try {
             ZestForkMain.run(testClass, testMethodName, guidance);
         } catch (MultipleFailureException e) {
@@ -51,14 +49,14 @@ public final class ZestReplayer implements Replayer {
     private static final class ReplayGuidance implements Guidance {
         private final byte[] input;
         private final File inputFile;
-        private final File argumentsDirectory;
+        private final ArgumentsWriter writer;
         private boolean consumed = false;
         private Throwable error = null;
 
-        private ReplayGuidance(byte[] input, File inputFile, File argumentsDirectory) {
+        private ReplayGuidance(byte[] input, File inputFile, ArgumentsWriter writer) {
             this.input = input;
             this.inputFile = inputFile;
-            this.argumentsDirectory = argumentsDirectory;
+            this.writer = writer;
         }
 
         @Override
@@ -75,17 +73,10 @@ public final class ZestReplayer implements Replayer {
 
         @Override
         public void observeGeneratedArgs(Object[] args) {
-            if (argumentsDirectory != null) {
-                try {
-                    for (int i = 0; i < args.length; i++) {
-                        File file = new File(argumentsDirectory, String.format("%s.%d", inputFile.getName(), i));
-                        try (PrintWriter out = new PrintWriter(file)) {
-                            out.print(args[i]);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            try {
+                writer.write(args, inputFile);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
