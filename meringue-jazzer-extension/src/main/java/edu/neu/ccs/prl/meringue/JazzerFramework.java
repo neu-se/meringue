@@ -69,7 +69,7 @@ public final class JazzerFramework implements FuzzFramework {
             return ProcessUtil.start(builder, true);
         } else {
             return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
-                          .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile)).start();
+                          .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
@@ -81,8 +81,7 @@ public final class JazzerFramework implements FuzzFramework {
     @Override
     public File[] getFailureFiles() {
         return Arrays.stream(Objects.requireNonNull(workingDir.listFiles()))
-                     .filter(f -> f.getName().startsWith("crash-"))
-                     .toArray(File[]::new);
+                     .filter(f -> f.getName().startsWith("crash-")).toArray(File[]::new);
     }
 
     @Override
@@ -110,7 +109,7 @@ public final class JazzerFramework implements FuzzFramework {
             return ProcessUtil.start(builder, true);
         } else {
             return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
-                          .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile)).start();
+                          .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
