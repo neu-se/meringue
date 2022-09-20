@@ -68,7 +68,8 @@ public final class JazzerFramework implements FuzzFramework {
         if (!quiet) {
             return ProcessUtil.start(builder, true);
         } else {
-            return builder.redirectError(logFile).redirectOutput(logFile).start();
+            return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
+                          .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
@@ -108,7 +109,8 @@ public final class JazzerFramework implements FuzzFramework {
         if (!quiet) {
             return ProcessUtil.start(builder, true);
         } else {
-            return builder.redirectError(logFile).redirectOutput(logFile).start();
+            return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
+                          .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
