@@ -77,11 +77,15 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return testClass + "#" + testMethod;
     }
 
+    Properties getFrameworkArguments() {
+        return frameworkArguments;
+    }
+
     CampaignConfiguration createConfiguration() throws MojoExecutionException {
         validateJavaExec();
         initializeOutputDir();
-        return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(),
-                                         javaOptions, createTestJar(), javaExec);
+        return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(), javaOptions,
+                                         createTestJar(), javaExec);
     }
 
     Set<File> getTestClassPathElements() throws MojoExecutionException {
@@ -153,8 +157,9 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     File createAnalysisJar() throws MojoExecutionException {
         try {
             File jar = new File(getLibraryDirectory(), "analysis.jar");
-            FileUtil.buildManifestJar(Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class)
-                                            .map(FileUtil::getClassPathElement).collect(Collectors.toList()), jar);
+            FileUtil.buildManifestJar(
+                    Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class).map(FileUtil::getClassPathElement)
+                          .collect(Collectors.toList()), jar);
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
@@ -165,10 +170,8 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return outputDir;
     }
 
-    String buildClassPath(File classPathElement, File... remainingClassPathElements) {
-        List<File> elements = new LinkedList<>(Arrays.asList(remainingClassPathElements));
-        elements.add(classPathElement);
-        return elements.stream()
+    public static String buildClassPath(File... classPathElements) {
+        return Arrays.stream(classPathElements)
                        .map(File::getAbsolutePath)
                        .map(SurefireHelper::escapeToPlatformPath)
                        .collect(Collectors.joining(File.pathSeparator));
