@@ -59,7 +59,7 @@ public final class CampaignConfiguration implements Serializable {
      */
     private final Map<String, String> environment;
     /**
-     * Working directory for test JVMs or {@code null} if the test JVMs should inherit the working directory of the
+     * Working directory for test JVMs or {@code null} if test JVMs should inherit the working directory of the
      * current process.
      *
      * @see ProcessBuilder#directory()
