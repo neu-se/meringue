@@ -3,8 +3,12 @@ package edu.neu.ccs.prl.meringue;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiFunction;
 
-public abstract class JvmLauncher implements Serializable {
+public final class JvmLauncher implements Serializable {
     /**
      * Prefix of JVM option indicating that the JVM should suspend and wait for a debugger to attach.
      */
@@ -12,23 +16,33 @@ public abstract class JvmLauncher implements Serializable {
     private static final long serialVersionUID = -2657754668579290763L;
     private final File javaExec;
     private final String[] options;
+    /**
+     * {@code true} if the standard output and error of the forked JVM should be redirected to the standard out and
+     * error of this process instead of discarded
+     */
     private final boolean verbose;
     private final String[] arguments;
+    private final File workingDir;
+    private final Map<String, String> environment;
+    private final BiFunction<JvmLauncher, String[], String[]> commandCreator;
 
-    /**
-     * @param verbose true if the standard output and error of the forked JVM should be redirected to the standard
-     *                out and error of this process instead of discarded
-     */
-    JvmLauncher(File javaExec, String[] options, boolean verbose, String[] arguments) {
-        if (!javaExec.isFile()) {
+    JvmLauncher(File javaExec, String[] options, boolean verbose, String[] arguments, File workingDir,
+                Map<String, String> environment, BiFunction<JvmLauncher, String[], String[]> commandCreator) {
+        if (!javaExec.isFile() || (workingDir != null && !workingDir.isDirectory())) {
             throw new IllegalArgumentException();
         }
+        if (commandCreator == null) {
+            throw new NullPointerException();
+        }
+        this.workingDir = workingDir;
+        this.environment = environment == null ? null : Collections.unmodifiableMap(new HashMap<>(environment));
         this.javaExec = javaExec;
         this.options = options.clone();
         this.verbose = verbose;
         this.arguments = arguments.clone();
         JvmLauncher.checkElementsNonNull(this.arguments);
         JvmLauncher.checkElementsNonNull(this.options);
+        this.commandCreator = commandCreator;
     }
 
     /**
@@ -38,7 +52,12 @@ public abstract class JvmLauncher implements Serializable {
      * @throws IOException       if an I/O error occurs
      */
     public Process launch() throws IOException {
-        return ProcessUtil.start(new ProcessBuilder(createCommand()), isVerbose());
+        ProcessBuilder builder = new ProcessBuilder().command(createCommand()).directory(workingDir);
+        if (environment != null) {
+            builder.environment().clear();
+            builder.environment().putAll(environment);
+        }
+        return ProcessUtil.start(builder, isVerbose());
     }
 
     public File getJavaExec() {
@@ -57,29 +76,37 @@ public abstract class JvmLauncher implements Serializable {
         return arguments.clone();
     }
 
-    abstract JvmLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments);
+    public File getWorkingDir() {
+        return workingDir;
+    }
+
+    public Map<String, String> getEnvironment() {
+        return environment;
+    }
 
     public JvmLauncher withJavaExec(File javaExec) {
-        return with(javaExec, options, verbose, arguments);
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
     }
 
     public JvmLauncher withOptions(String... options) {
-        return with(javaExec, options, verbose, arguments);
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
     }
 
     public JvmLauncher withVerbose(boolean verbose) {
-        return with(javaExec, options, verbose, arguments);
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
     }
 
     public JvmLauncher withArguments(String... arguments) {
-        return with(javaExec, options, verbose, arguments);
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
     }
 
     public String[] createCommand() {
-        return createCommand(arguments);
+        return commandCreator.apply(this, arguments);
     }
 
-    public abstract String[] createCommand(String... arguments);
+    public String[] createCommand(String... arguments) {
+        return commandCreator.apply(this, arguments);
+    }
 
     public JvmLauncher appendArguments(String... arguments) {
         String[] newArguments = new String[this.arguments.length + arguments.length];
@@ -95,6 +122,14 @@ public abstract class JvmLauncher implements Serializable {
         return withOptions(newOptions);
     }
 
+    public JvmLauncher withEnvironment(Map<String, String> environment) {
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
+    }
+
+    public JvmLauncher withWorkingDirectory(File workingDir) {
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment, commandCreator);
+    }
+
     private static <T> void checkElementsNonNull(T[] elements) {
         for (T element : elements) {
             if (element == null) {
@@ -106,24 +141,39 @@ public abstract class JvmLauncher implements Serializable {
     /**
      * Creates forked JVMs using a command of the form: java [ options ] -jar file.jar [ argument ... ].
      */
-    public static final class JarLauncher extends JvmLauncher {
-        private static final long serialVersionUID = -6897111153301141296L;
+    public static JvmLauncher fromJar(File javaExec, File jar, String[] options, boolean verbose, String[] arguments,
+                                      File workingDir, Map<String, String> environment) {
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment,
+                               new JarCommandCreator(jar));
+    }
+
+    /**
+     * Creates forked JVMs using a command of the form: java [ options ] class [ argument ... ].
+     */
+    public static JvmLauncher fromMain(File javaExec, String mainClassName, String[] options, boolean verbose,
+                                       String[] arguments, File workingDir, Map<String, String> environment) {
+        return new JvmLauncher(javaExec, options, verbose, arguments, workingDir, environment,
+                               new JavaMainCommandCreator(mainClassName));
+    }
+
+    private static final class JarCommandCreator implements BiFunction<JvmLauncher, String[], String[]>, Serializable {
+        private static final long serialVersionUID = 4166136230103308077L;
         private final File jar;
 
-        public JarLauncher(File javaExec, File jar, String[] options, boolean verbose, String[] arguments) {
-            super(javaExec, options, verbose, arguments);
+        private JarCommandCreator(File jar) {
+            this.jar = jar;
             if (!jar.isFile()) {
                 throw new IllegalArgumentException();
             }
-            this.jar = jar;
         }
 
         @Override
-        public String[] createCommand(String[] arguments) {
-            String[] options = getOptions();
+        public String[] apply(JvmLauncher launcher, String[] strings) {
+            String[] options = launcher.getOptions();
+            String[] arguments = launcher.getArguments();
             String[] command = new String[options.length + arguments.length + 3];
             int i = 0;
-            command[i++] = getJavaExec().getAbsolutePath();
+            command[i++] = launcher.getJavaExec().getAbsolutePath();
             for (String option : options) {
                 command[i++] = option;
             }
@@ -134,43 +184,27 @@ public abstract class JvmLauncher implements Serializable {
             }
             return command;
         }
-
-        @Override
-        JarLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments) {
-            return new JarLauncher(javaExec, jar, options, verbose, arguments);
-        }
-
-        public File getJar() {
-            return jar;
-        }
-
-        public JarLauncher withJar(File jar) {
-            return new JarLauncher(getJavaExec(), jar, getOptions(), isVerbose(), getArguments());
-        }
     }
 
-    /**
-     * Creates forked JVMs using a command of the form: java [ options ] class [ argument ... ].
-     */
-    public static final class JavaMainLauncher extends JvmLauncher {
-        private static final long serialVersionUID = 6658540649100605982L;
+    private static final class JavaMainCommandCreator
+            implements BiFunction<JvmLauncher, String[], String[]>, Serializable {
+        private static final long serialVersionUID = 4166136230103308077L;
         private final String mainClassName;
 
-        public JavaMainLauncher(File javaExec, String mainClassName, String[] options, boolean verbose,
-                                String[] arguments) {
-            super(javaExec, options, verbose, arguments);
-            if (mainClassName.isEmpty()) {
-                throw new IllegalArgumentException();
+        private JavaMainCommandCreator(String mainClassName) {
+            if (mainClassName == null) {
+                throw new NullPointerException();
             }
             this.mainClassName = mainClassName;
         }
 
         @Override
-        public String[] createCommand(String[] arguments) {
-            String[] options = getOptions();
+        public String[] apply(JvmLauncher launcher, String[] strings) {
+            String[] options = launcher.getOptions();
+            String[] arguments = launcher.getArguments();
             String[] command = new String[options.length + arguments.length + 2];
             int i = 0;
-            command[i++] = getJavaExec().getAbsolutePath();
+            command[i++] = launcher.getJavaExec().getAbsolutePath();
             for (String option : options) {
                 command[i++] = option;
             }
@@ -179,19 +213,6 @@ public abstract class JvmLauncher implements Serializable {
                 command[i++] = argument;
             }
             return command;
-        }
-
-        @Override
-        JavaMainLauncher with(File javaExec, String[] options, boolean verbose, String[] arguments) {
-            return new JavaMainLauncher(javaExec, mainClassName, options, verbose, arguments);
-        }
-
-        public String getMainClassName() {
-            return mainClassName;
-        }
-
-        public JavaMainLauncher withMainClassName(String mainClassName) {
-            return new JavaMainLauncher(getJavaExec(), mainClassName, getOptions(), isVerbose(), getArguments());
         }
     }
 }

@@ -26,21 +26,20 @@ public class ZestFramework implements FuzzFramework {
         List<String> javaOptions = new ArrayList<>(config.getJavaOptions());
         File instrumentJar = FileUtil.getClassPathElement(SnoopInstructionTransformer.class);
         File asmJar = FileUtil.getClassPathElement(ClassVisitor.class);
-        javaOptions.add(String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(),
-                asmJar.getAbsolutePath()));
+        javaOptions.add(
+                String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(), asmJar.getAbsolutePath()));
         javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
         javaOptions.add("-cp");
         String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
                 FileUtil.getClassPathElement(ZestFramework.class).getAbsolutePath() + File.pathSeparator +
                 FileUtil.getClassPathElement(FuzzFramework.class).getAbsolutePath();
         javaOptions.add(classPath);
-        String[] arguments = new String[]{
-                config.getTestClassName(),
-                config.getTestMethodName(),
-                outputDir.getAbsolutePath()
-        };
-        launcher = new JvmLauncher.JavaMainLauncher(config.getJavaExec(), ZestForkMain.class.getName(),
-                javaOptions.toArray(new String[0]), true, arguments);
+        String[] arguments =
+                new String[]{config.getTestClassName(), config.getTestMethodName(), outputDir.getAbsolutePath()};
+        launcher = JvmLauncher.fromMain(config.getJavaExec(), ZestForkMain.class.getName(),
+                                        javaOptions.toArray(new String[0]), true, arguments,
+                                        config.getWorkingDir(),
+                                        config.getEnvironment());
     }
 
     @Override
@@ -68,8 +67,7 @@ public class ZestFramework implements FuzzFramework {
 
     @Override
     public Collection<File> getRequiredClassPathElements() {
-        return Stream.of(ZestFramework.class, FuzzFramework.class)
-                .map(FileUtil::getClassPathElement)
-                .collect(Collectors.toList());
+        return Stream.of(ZestFramework.class, FuzzFramework.class).map(FileUtil::getClassPathElement)
+                     .collect(Collectors.toList());
     }
 }

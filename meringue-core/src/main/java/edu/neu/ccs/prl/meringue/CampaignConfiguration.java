@@ -3,9 +3,7 @@ package edu.neu.ccs.prl.meringue;
 import java.io.File;
 import java.io.Serializable;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public final class CampaignConfiguration implements Serializable {
     private static final long serialVersionUID = -1880940974469925517L;
@@ -53,11 +51,26 @@ public final class CampaignConfiguration implements Serializable {
      * Non-null, contains no null elements, unmodifiable.
      */
     private final List<String> javaOptions;
+    /**
+     * Unmodifiable map of specifying environment variable settings for test JVMs or {@code null} if test JVMs should
+     * inherit the environment of the current process.
+     *
+     * @see ProcessBuilder#environment()
+     */
+    private final Map<String, String> environment;
+    /**
+     * Working directory for test JVMs or {@code null} if the test JVMs should inherit the working directory of the
+     * current process.
+     *
+     * @see ProcessBuilder#directory()
+     */
+    private final File workingDir;
 
     public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
-                                 List<String> javaOptions, File testClassPathJar, File javaExec) {
-        if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative()
-                || !outputDir.isDirectory() || !testClassPathJar.isFile() || !javaExec.isFile()) {
+                                 List<String> javaOptions, File testClassPathJar, File javaExec, File workingDir,
+                                 Map<String, String> environment) {
+        if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative() || !outputDir.isDirectory() ||
+                !testClassPathJar.isFile() || !javaExec.isFile() || (workingDir != null && !workingDir.isDirectory())) {
             throw new IllegalArgumentException();
         }
         this.testClassName = testClassName;
@@ -72,6 +85,14 @@ public final class CampaignConfiguration implements Serializable {
         }
         this.testClassPathJar = testClassPathJar;
         this.javaExec = javaExec;
+        this.environment = environment == null ? null : Collections.unmodifiableMap(new HashMap<>(environment));
+        this.workingDir = workingDir;
+    }
+
+
+    public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
+                                 List<String> javaOptions, File testClassPathJar, File javaExec) {
+        this(testClassName, testMethodName, duration, outputDir, javaOptions, testClassPathJar, javaExec, null, null);
     }
 
     public Duration getDuration() {
@@ -100,5 +121,13 @@ public final class CampaignConfiguration implements Serializable {
 
     public File getJavaExec() {
         return javaExec;
+    }
+
+    public Map<String, String> getEnvironment() {
+        return environment;
+    }
+
+    public File getWorkingDir() {
+        return workingDir;
     }
 }

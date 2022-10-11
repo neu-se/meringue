@@ -140,9 +140,10 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         options.add(filter.getJacocoOption());
         String[] arguments = new String[]{config.getTestClassName(), config.getTestMethodName(),
                 framework.getReplayerClass().getName(), String.valueOf(maxTraceSize)};
-        return new JvmLauncher.JavaMainLauncher(config.getJavaExec(), AnalysisForkMain.class.getName(),
-                                                options.toArray(new String[0]),
-                                                debug | Boolean.getBoolean("meringue.verbose"), arguments);
+        return JvmLauncher.fromMain(config.getJavaExec(), AnalysisForkMain.class.getName(),
+                                    options.toArray(new String[0]),
+                                    debug | Boolean.getBoolean("meringue.verbose"), arguments,
+                                    config.getWorkingDir(), config.getEnvironment());
     }
 
     private File[] getSources() {

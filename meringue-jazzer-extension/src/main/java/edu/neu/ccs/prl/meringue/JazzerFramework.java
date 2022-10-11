@@ -15,8 +15,8 @@ public final class JazzerFramework implements FuzzFramework {
     private File reproducerDir;
     private File workingDir;
     private File logFile;
-    private ProcessBuilder builder;
     private boolean quiet = false;
+    private ProcessBuilder builder;
 
     @Override
     public void initialize(CampaignConfiguration config, Properties frameworkArguments) throws IOException {
@@ -25,34 +25,14 @@ public final class JazzerFramework implements FuzzFramework {
         reproducerDir = new File(outputDir, "reproducer");
         workingDir = new File(outputDir, "out");
         logFile = new File(outputDir, "jazzer.log");
-        List<String> command = new LinkedList<>();
-        command.add(getJazzerExecutable(outputDir).getAbsolutePath());
-        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
-                FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
-        command.add("--cp=" + classPath);
-        if (config.getTestMethodName().equals("fuzzerTestOneInput")) {
-            command.add("--target_class=" + config.getTestClassName());
-        } else {
-            command.add("--target_class=" + JazzerTargetWrapper.class.getName());
-            command.add("--target_args=" + config.getTestClassName() + " " + config.getTestMethodName());
-        }
-        command.add("--keep_going=" + Integer.MAX_VALUE);
-        command.add("--reproducer_path=" + reproducerDir.getAbsolutePath());
-        if (!config.getJavaOptions().isEmpty()) {
-            command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
-        }
         quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
-        String argLine = frameworkArguments.getProperty("argLine");
-        if (argLine != null && !argLine.isEmpty()) {
-            for (String s : argLine.split("\\s")) {
-                if (!s.isEmpty()) {
-                    command.add(s);
-                }
-            }
-        }
-        command.add("-rss_limit_mb=0");
-        command.add(corpusDir.getAbsolutePath());
+        quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
+        List<String> command = createCommand(config, frameworkArguments, outputDir, reproducerDir, corpusDir);
         builder = new ProcessBuilder().command(command).directory(workingDir);
+        if (config.getEnvironment() != null) {
+            builder.environment().clear();
+            builder.environment().putAll(config.getEnvironment());
+        }
         builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExec()).getAbsolutePath());
     }
 
@@ -62,9 +42,7 @@ public final class JazzerFramework implements FuzzFramework {
         FileUtil.ensureEmptyDirectory(corpusDir);
         FileUtil.ensureEmptyDirectory(reproducerDir);
         FileUtil.ensureEmptyDirectory(workingDir);
-        if (logFile.exists() && !logFile.delete()) {
-            throw new IOException("Failed to delete existing Jazzer log file: " + logFile);
-        }
+        FileUtil.delete(logFile);
         if (!quiet) {
             return ProcessUtil.start(builder, true);
         } else {
@@ -111,6 +89,37 @@ public final class JazzerFramework implements FuzzFramework {
             return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
                           .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
+    }
+
+    private static List<String> createCommand(CampaignConfiguration config, Properties frameworkArguments,
+                                              File outputDir, File reproducerDir, File corpusDir) throws IOException {
+        List<String> command = new LinkedList<>();
+        command.add(getJazzerExecutable(outputDir).getAbsolutePath());
+        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
+                FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
+        command.add("--cp=" + classPath);
+        if (config.getTestMethodName().equals("fuzzerTestOneInput")) {
+            command.add("--target_class=" + config.getTestClassName());
+        } else {
+            command.add("--target_class=" + JazzerTargetWrapper.class.getName());
+            command.add("--target_args=" + config.getTestClassName() + " " + config.getTestMethodName());
+        }
+        command.add("--keep_going=" + Integer.MAX_VALUE);
+        command.add("--reproducer_path=" + reproducerDir.getAbsolutePath());
+        if (!config.getJavaOptions().isEmpty()) {
+            command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
+        }
+        String argLine = frameworkArguments.getProperty("argLine");
+        if (argLine != null && !argLine.isEmpty()) {
+            for (String s : argLine.split("\\s")) {
+                if (!s.isEmpty()) {
+                    command.add(s);
+                }
+            }
+        }
+        command.add("-rss_limit_mb=0");
+        command.add(corpusDir.getAbsolutePath());
+        return command;
     }
 
     private static File getJazzerExecutable(File outputDir) throws IOException {
