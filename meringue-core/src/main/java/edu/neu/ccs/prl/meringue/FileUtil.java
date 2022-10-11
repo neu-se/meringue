@@ -18,23 +18,24 @@ import java.util.jar.Manifest;
 public final class FileUtil {
     private FileUtil() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                "not be instantiated");
+                                         "not be instantiated");
     }
 
     /**
-     * Creates a Java Archive (JAR) file containing only a manifest that specifies a value for the Class-Path attribute.
+     * Creates a Java Archive (JAR) file containing only a manifest that specifies a value for the Class-Path
+     * attribute.
      *
      * @param classPathElements elements to be included on the class path
      * @param jar               the JAR file that should be created
      * @throws IOException          if an I/O error occurs
-     * @throws NullPointerException if {@code classPathElements} is null,
-     *                              an element of {@code classPathElements} is null, or {@code jar} is null.
+     * @throws NullPointerException if {@code classPathElements} is null, an element of {@code classPathElements} is
+     *                              null, or {@code jar} is null.
      */
     public static void buildManifestJar(Collection<File> classPathElements, File jar) throws IOException {
         Set<File> classPathFilesCopy = new HashSet<>(classPathElements);
         String[] paths = classPathFilesCopy.stream()
-                .map(f -> f.isFile() ? f.getAbsolutePath() : f.getAbsolutePath() + "/")
-                .toArray(String[]::new);
+                                           .map(f -> f.isFile() ? f.getAbsolutePath() : f.getAbsolutePath() + "/")
+                                           .toArray(String[]::new);
         ensureDirectory(jar.getParentFile());
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().putValue("Manifest-Version", "1.0");
@@ -52,8 +53,8 @@ public final class FileUtil {
     }
 
     /**
-     * Returns the home directory of the Java installation for the specified Java executable.
-     * pre-java 9 HOME/jre/bin/java or HOME/bin/java
+     * Returns the home directory of the Java installation for the specified Java executable. pre-java 9
+     * HOME/jre/bin/java or HOME/bin/java
      *
      * @param javaExec a Java executable
      * @return the home directory of the Java installation for the specified Java executable
@@ -89,30 +90,48 @@ public final class FileUtil {
      * @param dir the directory to be created or emptied
      * @throws IOException if the specified directory could not be created or emptied
      */
-    public static void createOrCleanDirectory(File dir) throws IOException {
+    public static void ensureEmptyDirectory(File dir) throws IOException {
         if (dir.isDirectory()) {
-            Files.walkFileTree(dir.toPath(), new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    Files.delete(file);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
-                    if (e == null) {
-                        Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    } else {
-                        throw e;
-                    }
-                }
-            });
-        } else if (dir.isFile() && !dir.delete()) {
-            throw new IOException("Failed to delete: " + dir);
+            deleteDirectory(dir);
+        } else {
+            delete(dir);
         }
-        if (!dir.mkdirs()) {
-            throw new IOException("Failed to create directory: " + dir);
+        ensureDirectory(dir);
+    }
+
+    /**
+     * Deletes the specified directory and all of its contents.
+     *
+     * @param dir the directory to be deleted
+     * @throws NullPointerException if the specified directory is {@code null}
+     * @throws IOException          if {@code dir} is not a directory or an I/O error occurs
+     */
+    public static void deleteDirectory(File dir) throws IOException {
+        if (!dir.isDirectory()) {
+            throw new IOException();
+        }
+        Files.walkFileTree(dir.toPath(), new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
+                if (e == null) {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                } else {
+                    throw e;
+                }
+            }
+        });
+    }
+
+    public static void delete(File file) throws IOException {
+        if (file.exists() && !file.delete()) {
+            throw new IOException("Failed to delete existing file: " + file);
         }
     }
 }

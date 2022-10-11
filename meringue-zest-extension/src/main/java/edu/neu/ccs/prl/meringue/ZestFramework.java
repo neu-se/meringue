@@ -46,8 +46,8 @@ public class ZestFramework implements FuzzFramework {
     @Override
     public Process startCampaign() throws IOException {
         FileUtil.ensureDirectory(outputDir);
-        FileUtil.createOrCleanDirectory(corpusDir);
-        FileUtil.createOrCleanDirectory(failuresDir);
+        FileUtil.ensureEmptyDirectory(corpusDir);
+        FileUtil.ensureEmptyDirectory(failuresDir);
         return launcher.launch();
     }
 

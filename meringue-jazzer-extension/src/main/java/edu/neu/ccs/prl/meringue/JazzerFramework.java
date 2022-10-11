@@ -59,9 +59,9 @@ public final class JazzerFramework implements FuzzFramework {
     @Override
     public Process startCampaign() throws IOException {
         FileUtil.ensureDirectory(outputDir);
-        FileUtil.createOrCleanDirectory(corpusDir);
-        FileUtil.createOrCleanDirectory(reproducerDir);
-        FileUtil.createOrCleanDirectory(workingDir);
+        FileUtil.ensureEmptyDirectory(corpusDir);
+        FileUtil.ensureEmptyDirectory(reproducerDir);
+        FileUtil.ensureEmptyDirectory(workingDir);
         if (logFile.exists() && !logFile.delete()) {
             throw new IOException("Failed to delete existing Jazzer log file: " + logFile);
         }
