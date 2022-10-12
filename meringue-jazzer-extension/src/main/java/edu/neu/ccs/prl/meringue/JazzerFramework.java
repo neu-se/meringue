@@ -33,6 +33,8 @@ public final class JazzerFramework implements FuzzFramework {
             builder.environment().clear();
             builder.environment().putAll(config.getEnvironment());
         }
+        // TODO set user.dir to config.getWorkingDir().getAbsolutePath() to compensate for need to use specific working
+        // directory for the fork
         builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExec()).getAbsolutePath());
     }
 
