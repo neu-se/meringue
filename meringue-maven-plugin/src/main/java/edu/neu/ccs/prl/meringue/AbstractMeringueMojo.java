@@ -77,10 +77,6 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return testClass + "#" + testMethod;
     }
 
-    Properties getFrameworkArguments() {
-        return frameworkArguments;
-    }
-
     CampaignConfiguration createConfiguration() throws MojoExecutionException {
         validateJavaExec();
         initializeOutputDir();
@@ -170,14 +166,14 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return outputDir;
     }
 
-    public static String buildClassPath(File... classPathElements) {
-        return Arrays.stream(classPathElements)
-                       .map(File::getAbsolutePath)
-                       .map(SurefireHelper::escapeToPlatformPath)
-                       .collect(Collectors.joining(File.pathSeparator));
-    }
-
     MavenProject getProject() {
         return project;
+    }
+
+    public static String buildClassPath(File... classPathElements) {
+        return Arrays.stream(classPathElements)
+                     .map(File::getAbsolutePath)
+                     .map(SurefireHelper::escapeToPlatformPath)
+                     .collect(Collectors.joining(File.pathSeparator));
     }
 }
