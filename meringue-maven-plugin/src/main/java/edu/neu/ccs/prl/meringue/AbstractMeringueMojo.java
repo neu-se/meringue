@@ -7,15 +7,12 @@ import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.surefire.booter.SystemUtils;
-import org.jacoco.agent.rt.internal_3570298.PreMain;
-import org.jacoco.core.analysis.Analyzer;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 abstract class AbstractMeringueMojo extends AbstractMojo {
     /**
@@ -78,8 +75,6 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     }
 
     CampaignConfiguration createConfiguration() throws MojoExecutionException {
-        validateJavaExec();
-        initializeOutputDir();
         return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(), javaOptions,
                                          createTestJar(), javaExec);
     }
@@ -92,33 +87,24 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
-    FuzzFramework createFramework(CampaignConfiguration config) throws MojoExecutionException {
-        try {
-            FuzzFramework instance = (FuzzFramework) Class.forName(framework).getDeclaredConstructor().newInstance();
-            instance.initialize(config, frameworkArguments);
-            return instance;
-        } catch (ClassCastException | ReflectiveOperationException | IOException e) {
-            throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
-        }
-    }
-
-    private void validateJavaExec() throws MojoExecutionException {
-        if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath()) || !javaExec.isFile()) {
-            throw new MojoExecutionException("Invalid Java executable: " + javaExec);
-        }
-    }
-
     File getLibraryDirectory() {
         return new File(outputDir, "lib");
     }
 
-    private void initializeOutputDir() throws MojoExecutionException {
+    void initialize() throws MojoExecutionException {
+        validateJavaExec();
         try {
             FileUtil.ensureDirectory(outputDir);
             FileUtil.ensureDirectory(getLibraryDirectory());
             FileUtil.ensureDirectory(getCampaignDirectory());
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to initialize output directory", e);
+        }
+    }
+
+    private void validateJavaExec() throws MojoExecutionException {
+        if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath()) || !javaExec.isFile()) {
+            throw new MojoExecutionException("Invalid Java executable: " + javaExec);
         }
     }
 
@@ -140,28 +126,6 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return framework;
     }
 
-    File createFrameworkJar(FuzzFramework fuzzFramework) throws MojoExecutionException {
-        try {
-            File jar = new File(getLibraryDirectory(), "framework.jar");
-            FileUtil.buildManifestJar(fuzzFramework.getRequiredClassPathElements(), jar);
-            return jar;
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create framework manifest JAR", e);
-        }
-    }
-
-    File createAnalysisJar() throws MojoExecutionException {
-        try {
-            File jar = new File(getLibraryDirectory(), "analysis.jar");
-            FileUtil.buildManifestJar(
-                    Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class).map(FileUtil::getClassPathElement)
-                          .collect(Collectors.toList()), jar);
-            return jar;
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
-        }
-    }
-
     File getOutputDir() {
         return outputDir;
     }
@@ -170,10 +134,24 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return project;
     }
 
+    Properties getFrameworkArguments() {
+        return frameworkArguments;
+    }
+
+    public static FuzzFramework createFramework(CampaignConfiguration config, String frameworkName,
+                                                Properties frameworkArguments) throws MojoExecutionException {
+        try {
+            FuzzFramework instance =
+                    (FuzzFramework) Class.forName(frameworkName).getDeclaredConstructor().newInstance();
+            instance.initialize(config, frameworkArguments);
+            return instance;
+        } catch (ClassCastException | ReflectiveOperationException | IOException e) {
+            throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
+        }
+    }
+
     public static String buildClassPath(File... classPathElements) {
-        return Arrays.stream(classPathElements)
-                     .map(File::getAbsolutePath)
-                     .map(SurefireHelper::escapeToPlatformPath)
+        return Arrays.stream(classPathElements).map(File::getAbsolutePath).map(SurefireHelper::escapeToPlatformPath)
                      .collect(Collectors.joining(File.pathSeparator));
     }
 }

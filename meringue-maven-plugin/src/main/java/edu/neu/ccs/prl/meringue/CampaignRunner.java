@@ -4,10 +4,16 @@ import org.apache.maven.plugin.MojoExecutionException;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class CampaignRunner {
-    public void run(FuzzFramework framework, Duration duration) throws MojoExecutionException {
+    public void run(CampaignConfiguration configuration, String frameworkName,
+                    Properties frameworkArguments, Duration duration) throws MojoExecutionException {
+        run(AbstractMeringueMojo.createFramework(configuration, frameworkName, frameworkArguments), duration);
+    }
+
+    private void run(FuzzFramework framework, Duration duration) throws MojoExecutionException {
         try {
             if (framework.canRestartCampaign()) {
                 runWithResets(framework, duration);

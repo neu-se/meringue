@@ -59,8 +59,8 @@ public final class CampaignConfiguration implements Serializable {
      */
     private final Map<String, String> environment;
     /**
-     * Working directory for test JVMs or {@code null} if test JVMs should inherit the working directory of the
-     * current process.
+     * Working directory for test JVMs or {@code null} if test JVMs should inherit the working directory of the current
+     * process.
      *
      * @see ProcessBuilder#directory()
      */
@@ -92,7 +92,8 @@ public final class CampaignConfiguration implements Serializable {
 
     public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
                                  List<String> javaOptions, File testClassPathJar, File javaExec) {
-        this(testClassName, testMethodName, duration, outputDir, javaOptions, testClassPathJar, javaExec, null, null);
+        this(testClassName, testMethodName, duration, outputDir, javaOptions, testClassPathJar, javaExec,
+             null, null);
     }
 
     public Duration getDuration() {
@@ -117,6 +118,10 @@ public final class CampaignConfiguration implements Serializable {
 
     public String getTestMethodName() {
         return testMethodName;
+    }
+
+    public String getTestDescription() {
+        return testClassName + "#" + testMethodName;
     }
 
     public File getJavaExec() {
