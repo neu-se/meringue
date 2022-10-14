@@ -70,10 +70,6 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return Duration.parse(duration);
     }
 
-    String getTestDescription() {
-        return testClass + "#" + testMethod;
-    }
-
     CampaignConfiguration createConfiguration() throws MojoExecutionException {
         return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(), javaOptions,
                                          createTestJar(), javaExec);
