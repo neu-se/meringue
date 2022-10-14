@@ -18,8 +18,8 @@ public class FuzzingMojo extends AbstractMeringueMojo {
         try {
             FileUtil.ensureEmptyDirectory(getOutputDir());
             initialize();
-            getLog().info("Running fuzzing campaign: " + getTestDescription());
-            new CampaignRunner().run(createConfiguration(), getFramework(), getFrameworkArguments(), getDuration());
+            new CampaignRunner(getLog(), getDuration())
+                    .run(createConfiguration(), getFramework(), getFrameworkArguments());
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to execute fuzzing campaign", e);
         }

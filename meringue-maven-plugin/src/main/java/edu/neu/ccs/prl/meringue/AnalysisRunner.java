@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,18 +21,18 @@ public class AnalysisRunner {
     private final Log log;
     private final boolean debug;
     private final boolean verbose;
-    private final long timeout;
     private final int maxTraceSize;
     private final CoverageFilter filter;
     private final File outputDirectory;
     private final File temporaryDirectory;
     private final MavenProject project;
     private final Set<File> testClassPathElements;
+    private final Duration timeout;
 
-    public AnalysisRunner(SourcesResolver resolver, Log log, boolean debug, boolean verbose, long timeout,
-                          int maxTraceSize, CoverageFilter filter, File outputDirectory,
-                          File temporaryDirectory, MavenProject project, Collection<File> testClassPathElements) {
-        if (resolver == null || log == null ||  filter == null || project == null) {
+    public AnalysisRunner(SourcesResolver resolver, Log log, boolean debug, boolean verbose, Duration timeout,
+                          int maxTraceSize, CoverageFilter filter, File outputDirectory, File temporaryDirectory,
+                          MavenProject project, Collection<File> testClassPathElements) {
+        if (resolver == null || log == null || filter == null || project == null) {
             throw new NullPointerException();
         }
         if (!outputDirectory.isDirectory() || !temporaryDirectory.isDirectory()) {
@@ -67,7 +68,7 @@ public class AnalysisRunner {
                                                           maxTraceSize, temporaryDirectory);
             CoverageCalculator calculator = filter.createCoverageCalculator(testClassPathElements);
             CampaignReport report = new CampaignReport(calculator, resolver.getSources(project));
-            try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout)) {
+            try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout.toMillis())) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
                     if ((i + 1) % 100 == 1) {
@@ -95,8 +96,7 @@ public class AnalysisRunner {
     }
 
     private void writeConfigurationInfo(CampaignConfiguration config, File file, long totalBranches,
-                                        String frameworkName)
-            throws IOException {
+                                        String frameworkName) throws IOException {
         try (PrintStream out = new PrintStream(new BufferedOutputStream(Files.newOutputStream(file.toPath())))) {
             out.printf("test_class_name: %s%n", config.getTestClassName());
             out.printf("test_method_name: %s%n", config.getTestMethodName());
@@ -106,7 +106,7 @@ public class AnalysisRunner {
             out.printf("java_executable: %s%n", config.getJavaExec().getAbsolutePath());
             out.printf("java_options: %s%n",
                        String.join(" ", config.getJavaOptions()).replaceAll(System.getProperty("line.separator"), " "));
-            out.printf("replay_timeout: %d%n", timeout);
+            out.printf("replay_timeout: %d%n", timeout.toMillis());
             out.printf("total_branches: %d%n", totalBranches);
         }
     }
@@ -114,8 +114,7 @@ public class AnalysisRunner {
 
     private static JvmLauncher createAnalysisLauncher(CampaignConfiguration config, FuzzFramework framework,
                                                       CoverageFilter filter, boolean debug, boolean verbose,
-                                                      int maxTraceSize,
-                                                      File temporaryDirectory)
+                                                      int maxTraceSize, File temporaryDirectory)
             throws MojoExecutionException, ReflectiveOperationException {
         List<String> options = new LinkedList<>(config.getJavaOptions());
         // Set property to indicate that the analysis phase is running

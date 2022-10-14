@@ -7,6 +7,7 @@ import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class AnalysisMojo extends AbstractMeringueMojo {
         initialize();
         SourcesResolver resolver = new SourcesResolver(getLog(), session, artifactResolver, artifactHandlerManager);
         CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
-        AnalysisRunner runner = new AnalysisRunner(resolver, getLog(), debug, verbose, timeout,
+        AnalysisRunner runner = new AnalysisRunner(resolver, getLog(), debug, verbose, Duration.ofMillis(timeout),
                                                    maxTraceSize, filter, getOutputDir(),
                                                    getLibraryDirectory(), getProject(), getTestClassPathElements());
         runner.run(createConfiguration(), getFramework(), getFrameworkArguments());
