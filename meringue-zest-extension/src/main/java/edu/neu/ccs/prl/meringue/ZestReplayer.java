@@ -7,7 +7,10 @@ import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
 import edu.berkeley.cs.jqf.instrument.tracing.events.TraceEvent;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.function.Consumer;
 
 public final class ZestReplayer implements Replayer {
@@ -25,8 +28,8 @@ public final class ZestReplayer implements Replayer {
     }
 
     @Override
-    public Throwable execute(byte[] input) {
-        ReplayGuidance guidance = new ReplayGuidance(input);
+    public Throwable execute(File input) throws IOException {
+        ReplayGuidance guidance = new ReplayGuidance(Files.readAllBytes(input.toPath()));
         GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);
         return guidance.error;
     }
