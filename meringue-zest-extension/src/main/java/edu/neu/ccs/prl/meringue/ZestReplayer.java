@@ -27,11 +27,19 @@ public final class ZestReplayer implements Replayer {
         this.testClass = Class.forName(testClassName, true, classLoader);
     }
 
-    @Override
-    public Throwable execute(File input) throws IOException {
+    private Throwable execute(File input) throws IOException {
         ReplayGuidance guidance = new ReplayGuidance(Files.readAllBytes(input.toPath()));
         GuidedFuzzing.run(testClass, testMethodName, guidance, System.out);
         return guidance.error;
+    }
+
+    @Override
+    public void accept(ReplayerManager manager) throws IOException {
+        while (manager.hasNextInput()) {
+            File input = manager.nextInput();
+            Throwable failure = execute(input);
+            manager.handleResult(failure);
+        }
     }
 
     private static final class ReplayGuidance implements Guidance {

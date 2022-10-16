@@ -13,9 +13,17 @@ public final class JazzerReplayer implements edu.neu.ccs.prl.meringue.Replayer {
         JazzerTargetWrapper.setRethrow(false);
     }
 
-    @Override
-    public Throwable execute(File input) throws IOException {
+    private Throwable execute(File input) throws IOException {
         Replayer.executeFuzzTarget(JazzerTargetWrapper.class, Files.readAllBytes(input.toPath()));
         return JazzerTargetWrapper.getLastThrown();
+    }
+
+    @Override
+    public void accept(ReplayerManager manager) throws IOException {
+        while (manager.hasNextInput()) {
+            File input = manager.nextInput();
+            Throwable failure = execute(input);
+            manager.handleResult(failure);
+        }
     }
 }
