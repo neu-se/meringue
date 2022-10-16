@@ -26,15 +26,12 @@ public final class JazzerFramework implements FuzzFramework {
         workingDir = new File(outputDir, "out");
         logFile = new File(outputDir, "jazzer.log");
         quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
-        quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
         List<String> command = createCommand(config, frameworkArguments, outputDir, reproducerDir, corpusDir);
         builder = new ProcessBuilder().command(command).directory(workingDir);
         if (config.getEnvironment() != null) {
             builder.environment().clear();
             builder.environment().putAll(config.getEnvironment());
         }
-        // TODO set user.dir to config.getWorkingDir().getAbsolutePath() to compensate for need to use specific working
-        // directory for the fork
         builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExec()).getAbsolutePath());
     }
 
