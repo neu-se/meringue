@@ -6,7 +6,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
-public class ReplayerManager implements Closeable {
+public final class ReplayerManager implements Closeable {
     private final ForkConnection connection;
     private final StackTraceCleaner cleaner;
 
