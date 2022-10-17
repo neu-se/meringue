@@ -74,7 +74,7 @@ public class AnalysisRunner {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
                     if ((i + 1) % 100 == 1) {
-                        log.info(String.format("Analyzed %d/%d input files%n", i + 1, inputFiles.length));
+                        log.info(String.format("Analyzed %d/%d input files", i + 1, inputFiles.length));
                     }
                 }
                 report = analyzer.getReport();
