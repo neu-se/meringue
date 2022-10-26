@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 public class CampaignRunner {
     private final Log log;
     private final Duration duration;
+    private Process process = null;
 
     public CampaignRunner(Log log, Duration duration) {
         if (log == null || duration == null) {
@@ -18,6 +19,7 @@ public class CampaignRunner {
         }
         this.log = log;
         this.duration = duration;
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
     public void run(CampaignConfiguration configuration, String frameworkName, Properties frameworkArguments)
@@ -29,7 +31,8 @@ public class CampaignRunner {
             if (framework.canRestartCampaign()) {
                 runWithResets(framework, duration);
             } else {
-                if (ProcessUtil.waitFor(framework.startCampaign(), duration.toMillis(), TimeUnit.MILLISECONDS)) {
+                if (ProcessUtil.waitFor(setProcess(framework.startCampaign()), duration.toMillis(),
+                                        TimeUnit.MILLISECONDS)) {
                     throw new IOException("Campaign process terminated unexpectedly");
                 }
             }
@@ -40,13 +43,28 @@ public class CampaignRunner {
 
     private void runWithResets(FuzzFramework framework, Duration duration) throws IOException, InterruptedException {
         long endTime = System.currentTimeMillis() + duration.toMillis();
-        if (!ProcessUtil.waitFor(framework.startCampaign(), duration.toMillis(), TimeUnit.MILLISECONDS)) {
+        if (!ProcessUtil.waitFor(setProcess(framework.startCampaign()), duration.toMillis(), TimeUnit.MILLISECONDS)) {
             return;
         }
         while (endTime > System.currentTimeMillis()) {
             long remaining = endTime - System.currentTimeMillis();
-            if (!ProcessUtil.waitFor(framework.restartCampaign(), remaining, TimeUnit.MILLISECONDS)) {
+            if (!ProcessUtil.waitFor(setProcess(framework.restartCampaign()), remaining, TimeUnit.MILLISECONDS)) {
                 return;
+            }
+        }
+    }
+
+    private synchronized Process setProcess(Process process) {
+        this.process = process;
+        return this.process;
+    }
+
+    private synchronized void shutdown() {
+        if (process != null) {
+            try {
+                ProcessUtil.stop(process);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }

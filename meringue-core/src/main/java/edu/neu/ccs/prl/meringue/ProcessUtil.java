@@ -20,7 +20,7 @@ public final class ProcessUtil {
 
     private ProcessUtil() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                "not be instantiated");
+                                         "not be instantiated");
     }
 
     /**
@@ -30,17 +30,14 @@ public final class ProcessUtil {
      * @param unit    the time unit of the timeout argument
      * @return true if the specified process exits and false if the waiting time elapsed before the process exited
      * @throws NullPointerException if the specified process is null
-     * @throws InterruptedException if a thread interrupts this thread while it is waiting for the forked process
-     *                              to finish
+     * @throws InterruptedException if a thread interrupts this thread while it is waiting for the forked process to
+     *                              finish
      */
     public static boolean waitFor(Process process, long timeout, TimeUnit unit) throws InterruptedException {
         try {
             return process.waitFor(timeout, unit);
         } finally {
-            if (process.isAlive()) {
-                process.destroyForcibly();
-                process.waitFor();
-            }
+            stop(process);
         }
     }
 
@@ -55,10 +52,7 @@ public final class ProcessUtil {
         try {
             return process.waitFor();
         } finally {
-            if (process.isAlive()) {
-                process.destroyForcibly();
-                process.waitFor();
-            }
+            stop(process);
         }
     }
 
@@ -77,5 +71,12 @@ public final class ProcessUtil {
      */
     public static Process start(ProcessBuilder builder, boolean verbose) throws IOException {
         return (verbose ? builder.inheritIO() : builder.redirectError(DISCARD).redirectOutput(DISCARD)).start();
+    }
+
+    public static void stop(Process process) throws InterruptedException {
+        if (process.isAlive()) {
+            process.destroyForcibly();
+            process.waitFor();
+        }
     }
 }
