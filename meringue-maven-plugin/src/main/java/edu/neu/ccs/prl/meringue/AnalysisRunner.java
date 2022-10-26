@@ -65,8 +65,8 @@ public class AnalysisRunner {
             if (inputFiles.length == 0) {
                 log.info("No input files were found for analysis");
             }
-            JvmLauncher launcher =
-                    AnalysisRunner.createAnalysisLauncher(configuration, framework, filter, debug, verbose,
+            framework.startingAnalysis();
+            JvmLauncher launcher = createAnalysisLauncher(configuration, framework, filter, debug, verbose,
                                                           maxTraceSize, temporaryDirectory);
             CoverageCalculator calculator = filter.createCoverageCalculator(testClassPathElements);
             CampaignReport report = new CampaignReport(calculator, resolver.getSources(project));
@@ -131,6 +131,7 @@ public class AnalysisRunner {
                 AbstractMeringueMojo.buildClassPath(createAnalysisJar(temporaryDirectory), config.getTestClassPathJar(),
                                                     createFrameworkJar(temporaryDirectory, framework)));
         options.add(filter.getJacocoOption());
+        options.addAll(framework.getAnalysisJavaOptions());
         String[] arguments = new String[]{config.getTestClassName(), config.getTestMethodName(),
                 framework.getReplayerClass().getName(), String.valueOf(maxTraceSize)};
         return JvmLauncher.fromMain(config.getJavaExec(), AnalysisForkMain.class.getName(),

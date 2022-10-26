@@ -3,6 +3,8 @@ package edu.neu.ccs.prl.meringue;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -28,5 +30,12 @@ public interface FuzzFramework {
 
     default Process restartCampaign() throws IOException {
         throw new UnsupportedOperationException();
+    }
+
+    default void startingAnalysis() throws IOException {
+    }
+
+    default List<String> getAnalysisJavaOptions() {
+        return Collections.emptyList();
     }
 }
