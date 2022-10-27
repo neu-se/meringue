@@ -25,19 +25,19 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     /**
      * List of JARs, directories, and files to be included in JaCoCo reports.
      */
-    @Parameter
+    @Parameter(property = "meringue.includedClassPathElements")
     List<File> includedClassPathElements = new LinkedList<>();
     /**
      * List of class files to include in JaCoCo reports. May use wildcard characters (* and ?). By default, all files
      * are included.
      */
-    @Parameter
+    @Parameter(property = "meringue.inclusions")
     private List<String> inclusions = new LinkedList<>();
     /**
      * List of class files to exclude from JaCoCo reports. May use wildcard characters (* and ?). By default, no files
      * are excluded.
      */
-    @Parameter(property = "meringue.exclusions", defaultValue = "HTML,CSV,XML")
+    @Parameter(property = "meringue.exclusions")
     private List<String> exclusions = new LinkedList<>();
     /**
      * Maximum number of frames to include in stack traces taken for failures. By default, a maximum of {@code 5} frames
