@@ -10,9 +10,6 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>meringue-examples</artifactId>
     <packaging>pom</packaging>
-    <properties>
-        <sourcesDirectory>${project.build.directory}/sources</sourcesDirectory>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.mozilla</groupId>
