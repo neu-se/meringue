@@ -6,7 +6,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
 
-import java.io.File;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,10 +22,11 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     protected MavenSession session;
     /**
-     * List of JARs, directories, and files to be included in JaCoCo reports.
+     * List of artifacts (in the form groupId:artifactId) to be included in coverage and JaCoCo reports. By default, all
+     * test classpath artifacts are included.
      */
-    @Parameter(property = "meringue.includedClassPathElements")
-    List<File> includedClassPathElements = new LinkedList<>();
+    @Parameter(property = "meringue.includedArtifacts")
+    List<String> includedArtifacts = new LinkedList<>();
     /**
      * List of class files to include in JaCoCo reports. May use wildcard characters (* and ?). By default, all files
      * are included.
@@ -76,11 +76,13 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Override
     public void execute() throws MojoExecutionException {
         initialize();
-        SourcesResolver resolver = new SourcesResolver(getLog(), session, artifactResolver, artifactHandlerManager);
-        CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedClassPathElements);
+        ArtifactSourceResolver resolver =
+                new ArtifactSourceResolver(getLog(), session, artifactResolver, artifactHandlerManager);
+        CoverageFilter filter =
+                new CoverageFilter(inclusions, exclusions, includedArtifacts, getProject(), resolver);
         AnalysisRunner runner =
-                new AnalysisRunner(resolver, getLog(), debug, verbose, Duration.ofMillis(timeout), maxTraceSize, filter,
-                                   getOutputDir(), getLibraryDirectory(), getProject(), getTestClassPathElements());
+                new AnalysisRunner(getLog(), debug, verbose, Duration.ofMillis(timeout), maxTraceSize, filter,
+                                   getOutputDirectory(), getTemporaryDirectory());
         runner.run(createConfiguration(), getFramework(), getFrameworkArguments(), jacocoFormats);
     }
 }

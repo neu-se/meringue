@@ -16,7 +16,7 @@ public class FuzzingMojo extends AbstractMeringueMojo {
     @Override
     public void execute() throws MojoExecutionException {
         try {
-            FileUtil.ensureEmptyDirectory(getOutputDir());
+            FileUtil.ensureEmptyDirectory(getOutputDirectory());
             initialize();
             new CampaignRunner(getLog(), getDuration())
                     .run(createConfiguration(), getFramework(), getFrameworkArguments());

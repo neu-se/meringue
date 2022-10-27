@@ -63,7 +63,6 @@ final class CampaignAnalyzer implements Closeable {
             // Input caused fork to fail
             closeConnection();
             restartConnection();
-            report.recordJvmCrash(inputFile);
         } finally {
             if (timer != null) {
                 timer.cancel();

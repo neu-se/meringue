@@ -23,8 +23,8 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     /**
      * Directory to which output files should be written.
      */
-    @Parameter(property = "meringue.outputDir", defaultValue = "${project.build.directory}/meringue")
-    private File outputDir;
+    @Parameter(property = "meringue.outputDirectory", defaultValue = "${project.build.directory}/meringue")
+    private File outputDirectory;
     /**
      * Fully-qualified name of the test class.
      *
@@ -65,6 +65,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
      */
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
+    /**
+     * Directory used to store internal temporary files created by Meringue.
+     */
+    @Parameter(defaultValue = "${project.build.directory}/temp/meringue", readonly = true, required = true)
+    private File temporaryDirectory;
 
     Duration getDuration() {
         return Duration.parse(duration);
@@ -75,23 +80,26 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
                                          createTestJar(), javaExec);
     }
 
-    Set<File> getTestClassPathElements() throws MojoExecutionException {
+    Set<File> getTestClasspathElements() throws MojoExecutionException {
         try {
-            return project.getTestClasspathElements().stream().map(File::new).collect(Collectors.toSet());
+            return project.getTestClasspathElements()
+                          .stream()
+                          .map(File::new)
+                          .collect(Collectors.toSet());
         } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("Required test dependency was not resolved", e);
         }
     }
 
-    File getLibraryDirectory() {
-        return new File(outputDir, "lib");
+    File getTemporaryDirectory() {
+        return temporaryDirectory;
     }
 
     void initialize() throws MojoExecutionException {
         validateJavaExec();
         try {
-            FileUtil.ensureDirectory(outputDir);
-            FileUtil.ensureDirectory(getLibraryDirectory());
+            FileUtil.ensureDirectory(outputDirectory);
+            FileUtil.ensureDirectory(temporaryDirectory);
             FileUtil.ensureDirectory(getCampaignDirectory());
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to initialize output directory", e);
@@ -105,13 +113,13 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     }
 
     private File getCampaignDirectory() {
-        return new File(outputDir, "campaign");
+        return new File(outputDirectory, "campaign");
     }
 
     private File createTestJar() throws MojoExecutionException {
         try {
-            File jar = new File(getLibraryDirectory(), "test.jar");
-            FileUtil.buildManifestJar(getTestClassPathElements(), jar);
+            File jar = new File(temporaryDirectory, "test.jar");
+            FileUtil.buildManifestJar(getTestClasspathElements(), jar);
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create test manifest JAR", e);
@@ -122,8 +130,8 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         return framework;
     }
 
-    File getOutputDir() {
-        return outputDir;
+    File getOutputDirectory() {
+        return outputDirectory;
     }
 
     MavenProject getProject() {
@@ -147,7 +155,9 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     }
 
     public static String buildClassPath(File... classPathElements) {
-        return Arrays.stream(classPathElements).map(File::getAbsolutePath).map(SurefireHelper::escapeToPlatformPath)
+        return Arrays.stream(classPathElements)
+                     .map(File::getAbsolutePath)
+                     .map(SurefireHelper::escapeToPlatformPath)
                      .collect(Collectors.joining(File.pathSeparator));
     }
 }

@@ -12,14 +12,12 @@ final class CampaignReport {
     private final long totalBranches;
     private final CoverageCalculator calculator;
     private final List<long[]> rows = new ArrayList<>();
-    private final File[] sources;
     private long firstTimestamp = -1;
     private byte[] lastExecData = null;
 
-    public CampaignReport(CoverageCalculator calculator, File[] sources) {
+    public CampaignReport(CoverageCalculator calculator) {
         this.totalBranches = calculator.getTotalBranches();
         this.calculator = calculator;
-        this.sources = sources.clone();
     }
 
     public void print(Log log) {
@@ -55,9 +53,9 @@ final class CampaignReport {
         }
     }
 
-    public void writeReport(String testDescription, File reportDir, JacocoReportFormat f) throws IOException {
-        calculator.createReport(lastExecData == null ? new byte[0] : lastExecData, testDescription, sources,
-                                f.createVisitor(reportDir));
+    public void writeReport(String testDescription, File reportDirectory, JacocoReportFormat f) throws IOException {
+        calculator.createReport(lastExecData == null ? new byte[0] : lastExecData, testDescription,
+                                f.createVisitor(reportDirectory));
     }
 
     public void record(File inputFile, byte[] execData, StackTraceElement[] trace) throws IOException {
@@ -77,9 +75,6 @@ final class CampaignReport {
             }
             failureMap.get(elements).add(inputFile);
         }
-    }
-
-    public void recordJvmCrash(File inputFile) {
     }
 
     private static byte[] mergeExecData(byte[] execData1, byte[] execData2) throws IOException {

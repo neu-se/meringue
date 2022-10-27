@@ -2,7 +2,6 @@ package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.project.MavenProject;
 import org.jacoco.agent.rt.internal_3570298.PreMain;
 import org.jacoco.core.analysis.Analyzer;
 
@@ -17,7 +16,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class AnalysisRunner {
-    private final SourcesResolver resolver;
     private final Log log;
     private final boolean debug;
     private final boolean verbose;
@@ -25,20 +23,16 @@ public class AnalysisRunner {
     private final CoverageFilter filter;
     private final File outputDirectory;
     private final File temporaryDirectory;
-    private final MavenProject project;
-    private final Set<File> testClassPathElements;
     private final Duration timeout;
 
-    public AnalysisRunner(SourcesResolver resolver, Log log, boolean debug, boolean verbose, Duration timeout,
-                          int maxTraceSize, CoverageFilter filter, File outputDirectory, File temporaryDirectory,
-                          MavenProject project, Collection<File> testClassPathElements) {
-        if (resolver == null || log == null || filter == null || project == null) {
+    public AnalysisRunner(Log log, boolean debug, boolean verbose, Duration timeout, int maxTraceSize,
+                          CoverageFilter filter, File outputDirectory, File temporaryDirectory) {
+        if (log == null || filter == null) {
             throw new NullPointerException();
         }
         if (!outputDirectory.isDirectory() || !temporaryDirectory.isDirectory()) {
             throw new IllegalArgumentException();
         }
-        this.resolver = resolver;
         this.log = log;
         this.debug = debug;
         this.verbose = verbose;
@@ -47,18 +41,12 @@ public class AnalysisRunner {
         this.filter = filter;
         this.outputDirectory = outputDirectory;
         this.temporaryDirectory = temporaryDirectory;
-        this.project = project;
-        this.testClassPathElements = new HashSet<>(testClassPathElements);
     }
 
     public void run(CampaignConfiguration configuration, String frameworkName, Properties frameworkArguments,
                     List<JacocoReportFormat> formats) throws MojoExecutionException {
-        run(configuration, AbstractMeringueMojo.createFramework(configuration, frameworkName, frameworkArguments),
-            formats);
-    }
-
-    private void run(CampaignConfiguration configuration, FuzzFramework framework, List<JacocoReportFormat> formats)
-            throws MojoExecutionException {
+        FuzzFramework framework =
+                AbstractMeringueMojo.createFramework(configuration, frameworkName, frameworkArguments);
         log.info("Running analysis for: " + configuration.getTestDescription());
         try {
             File[] inputFiles = collectInputFiles(framework);
@@ -66,10 +54,11 @@ public class AnalysisRunner {
                 log.info("No input files were found for analysis");
             }
             framework.startingAnalysis();
-            JvmLauncher launcher = createAnalysisLauncher(configuration, framework, filter, debug, verbose,
-                                                          maxTraceSize, temporaryDirectory);
-            CoverageCalculator calculator = filter.createCoverageCalculator(testClassPathElements);
-            CampaignReport report = new CampaignReport(calculator, resolver.getSources(project));
+            CoverageCalculator calculator = filter.createCoverageCalculator(temporaryDirectory);
+            JvmLauncher launcher =
+                    createAnalysisLauncher(configuration, framework, filter.getJacocoOption(), debug, verbose,
+                                           maxTraceSize, temporaryDirectory);
+            CampaignReport report = new CampaignReport(calculator);
             try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, timeout.toMillis())) {
                 for (int i = 0; i < inputFiles.length; i++) {
                     analyzer.analyze(inputFiles[i]);
@@ -110,14 +99,15 @@ public class AnalysisRunner {
             out.printf("output_directory: %s%n", config.getOutputDir().getAbsolutePath());
             out.printf("java_executable: %s%n", config.getJavaExec().getAbsolutePath());
             out.printf("java_options: %s%n",
-                       String.join(" ", config.getJavaOptions()).replaceAll(System.getProperty("line.separator"), " "));
+                       String.join(" ", config.getJavaOptions())
+                             .replaceAll(System.getProperty("line.separator"), " "));
             out.printf("replay_timeout: %d%n", timeout.toMillis());
             out.printf("total_branches: %d%n", totalBranches);
         }
     }
 
     private static JvmLauncher createAnalysisLauncher(CampaignConfiguration config, FuzzFramework framework,
-                                                      CoverageFilter filter, boolean debug, boolean verbose,
+                                                      String jacocoOption, boolean debug, boolean verbose,
                                                       int maxTraceSize, File temporaryDirectory)
             throws MojoExecutionException, ReflectiveOperationException {
         List<String> options = new LinkedList<>(config.getJavaOptions());
@@ -130,7 +120,7 @@ public class AnalysisRunner {
         options.add(
                 AbstractMeringueMojo.buildClassPath(createAnalysisJar(temporaryDirectory), config.getTestClassPathJar(),
                                                     createFrameworkJar(temporaryDirectory, framework)));
-        options.add(filter.getJacocoOption());
+        options.add(jacocoOption);
         options.addAll(framework.getAnalysisJavaOptions());
         String[] arguments = new String[]{config.getTestClassName(), config.getTestMethodName(),
                 framework.getReplayerClass().getName(), String.valueOf(maxTraceSize)};

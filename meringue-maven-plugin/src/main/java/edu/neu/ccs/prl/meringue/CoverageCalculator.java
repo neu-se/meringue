@@ -8,7 +8,6 @@ import org.jacoco.core.data.ExecutionData;
 import org.jacoco.core.data.ExecutionDataStore;
 import org.jacoco.core.internal.data.CRC64;
 import org.jacoco.core.internal.instr.InstrSupport;
-import org.jacoco.core.runtime.WildcardMatcher;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.DirectorySourceFileLocator;
 import org.jacoco.report.IReportVisitor;
@@ -29,21 +28,21 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 class CoverageCalculator {
+    final CoverageFilter filter;
     private final Map<Long, byte[]> idBufferMap = new HashMap<>();
-    private final WildcardMatcher includes;
-    private final WildcardMatcher excludes;
+    private final File temporaryDirectory;
     private long totalBranches = 0;
 
-    CoverageCalculator(Collection<File> classPathElements, String includes, String excludes) throws IOException {
-        this.includes = new WildcardMatcher(toVMName(includes));
-        this.excludes = new WildcardMatcher(toVMName(excludes));
+    CoverageCalculator(File temporaryDirectory, CoverageFilter filter) throws IOException {
+        this.temporaryDirectory = temporaryDirectory;
+        this.filter = filter;
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new RecordingAnalyzer(new ExecutionDataStore(), builder);
-        for (File classpathElement : classPathElements) {
-            analyzer.analyzeAll(classpathElement);
+        for (File artifact : filter.getIncludedArtifacts()) {
+            analyzer.analyzeAll(artifact);
         }
         for (IClassCoverage classCoverage : builder.getClasses()) {
-            if (filter(classCoverage.getName())) {
+            if (this.filter.filter(classCoverage.getName())) {
                 totalBranches += classCoverage.getBranchCounter().getTotalCount();
             }
         }
@@ -53,17 +52,13 @@ class CoverageCalculator {
         return totalBranches;
     }
 
-    boolean filter(String className) {
-        return includes.matches(className) && !excludes.matches(className);
-    }
-
     public long calculate(byte[] execData) throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new RecordingAnalyzer(loader.getExecutionDataStore(), builder);
         for (ExecutionData data : loader.getExecutionDataStore().getContents()) {
-            if (filter(data.getName()) && data.hasHits() && idBufferMap.containsKey(data.getId())) {
+            if (filter.filter(data.getName()) && data.hasHits() && idBufferMap.containsKey(data.getId())) {
                 analyzer.analyzeClass(idBufferMap.get(data.getId()), "");
             }
         }
@@ -74,8 +69,7 @@ class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createReport(byte[] execData, String testDesc, File[] sources, IReportVisitor visitor)
-            throws IOException {
+    public void createReport(byte[] execData, String testDesc, IReportVisitor visitor) throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
         CoverageBuilder builder = new CoverageBuilder();
@@ -84,16 +78,17 @@ class CoverageCalculator {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(builder.getBundle(testDesc), createLocator(sources));
+        visitor.visitBundle(builder.getBundle(testDesc), createLocator(filter.getIncludedArtifactSources()));
         visitor.visitEnd();
     }
 
-    private static ISourceFileLocator createLocator(File[] sources) throws IOException {
+    private ISourceFileLocator createLocator(Collection<File> sources) throws IOException {
+        int i = 0;
         MultiSourceFileLocator locator = new MultiSourceFileLocator(4);
         for (File source : sources) {
             String name = source.getName();
             if (isArchive(name)) {
-                File dest = new File(source.getParent(), name.substring(0, name.lastIndexOf(".")));
+                File dest = new File(temporaryDirectory, name.substring(0, name.lastIndexOf(".")) + i++);
                 if (!dest.exists()) {
                     extractArchive(source, dest.toPath());
                     locator.add(new DirectorySourceFileLocator(dest, "utf-8", 4));
@@ -105,10 +100,6 @@ class CoverageCalculator {
         return locator;
     }
 
-    private static String toVMName(final String srcName) {
-        return srcName.replace('.', '/');
-    }
-
     private static boolean isArchive(String name) {
         return name.endsWith(".jar") || name.endsWith(".war") || name.endsWith(".zip");
     }
@@ -117,9 +108,8 @@ class CoverageCalculator {
         Files.createDirectories(destination);
         try (ZipFile archive = new ZipFile(source)) {
             // Sort the entries to ensure that parents are created before children
-            List<? extends ZipEntry> entries = archive.stream()
-                                                      .sorted(Comparator.comparing(ZipEntry::getName))
-                                                      .collect(Collectors.toList());
+            List<? extends ZipEntry> entries =
+                    archive.stream().sorted(Comparator.comparing(ZipEntry::getName)).collect(Collectors.toList());
             for (ZipEntry entry : entries) {
                 Path entryDest = destination.resolve(entry.getName());
                 if (entry.isDirectory()) {
@@ -169,7 +159,7 @@ class CoverageCalculator {
         @Override
         public void analyzeClass(final byte[] buffer, final String location) {
             final ClassReader reader = InstrSupport.classReaderFor(buffer);
-            if (filter(reader.getClassName())) {
+            if (filter.filter(reader.getClassName())) {
                 long classId = CRC64.classId(buffer);
                 idBufferMap.put(classId, buffer);
                 super.analyzeClass(buffer, location);
