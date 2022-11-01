@@ -5,12 +5,11 @@ import edu.berkeley.cs.jqf.fuzz.guidance.Guidance;
 import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
 
 import java.io.File;
-import java.io.IOException;
 
 public final class ZestForkMain {
     private ZestForkMain() {
         throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                "not be instantiated");
+                                         "not be instantiated");
     }
 
     public static void main(String[] args) throws Throwable {
