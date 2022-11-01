@@ -13,11 +13,16 @@ public final class ZestForkMain {
                 "not be instantiated");
     }
 
-    public static void main(String[] args) throws ClassNotFoundException, IOException {
-        String testClassName = args[0];
-        String testMethodName = args[1];
-        File outputDir = new File(args[2]);
-        Guidance guidance = new ZestGuidance(testClassName + "#" + testMethodName, null, outputDir);
-        GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
+    public static void main(String[] args) throws Throwable {
+        try {
+            String testClassName = args[0];
+            String testMethodName = args[1];
+            File outputDir = new File(args[2]);
+            Guidance guidance = new ZestGuidance(testClassName + "#" + testMethodName, null, outputDir);
+            GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
+        }
     }
 }
