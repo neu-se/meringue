@@ -66,7 +66,8 @@ public class ZestFramework implements FuzzFramework {
 
     @Override
     public Collection<File> getRequiredClassPathElements() {
-        return Stream.of(ZestFramework.class, FuzzFramework.class).map(FileUtil::getClassPathElement)
+        return Stream.of(ZestFramework.class)
+                     .map(FileUtil::getClassPathElement)
                      .collect(Collectors.toList());
     }
 }
