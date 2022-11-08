@@ -31,8 +31,7 @@ public class ZestFramework implements FuzzFramework {
         javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
         javaOptions.add("-cp");
         String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
-                FileUtil.getClassPathElement(ZestFramework.class).getAbsolutePath() + File.pathSeparator +
-                FileUtil.getClassPathElement(FuzzFramework.class).getAbsolutePath();
+                FileUtil.getClassPathElement(ZestFramework.class).getAbsolutePath();
         javaOptions.add(classPath);
         String[] arguments =
                 new String[]{config.getTestClassName(), config.getTestMethodName(), outputDir.getAbsolutePath()};
