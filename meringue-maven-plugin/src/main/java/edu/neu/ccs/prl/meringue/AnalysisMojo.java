@@ -76,13 +76,19 @@ public class AnalysisMojo extends AbstractMeringueMojo {
     @Override
     public void execute() throws MojoExecutionException {
         initialize();
+        createRunner().run(createConfiguration(), getFramework(), getFrameworkArguments(), getJacocoFormats());
+    }
+
+    protected List<JacocoReportFormat> getJacocoFormats() {
+        return jacocoFormats;
+    }
+
+    protected AnalysisRunner createRunner() {
         ArtifactSourceResolver resolver =
                 new ArtifactSourceResolver(getLog(), session, artifactResolver, artifactHandlerManager);
-        CoverageFilter filter =
-                new CoverageFilter(inclusions, exclusions, includedArtifacts, getProject(), resolver);
-        AnalysisRunner runner =
-                new AnalysisRunner(getLog(), debug, verbose, Duration.ofMillis(timeout), maxTraceSize, filter,
-                                   getOutputDirectory(), getTemporaryDirectory());
-        runner.run(createConfiguration(), getFramework(), getFrameworkArguments(), jacocoFormats);
+        CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedArtifacts, getProject(), resolver);
+        return new AnalysisRunner(getLog(), debug, verbose, Duration.ofMillis(timeout),
+                                  maxTraceSize, filter,
+                                  getOutputDirectory(), getTemporaryDirectory());
     }
 }

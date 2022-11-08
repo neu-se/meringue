@@ -71,16 +71,16 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}/temp/meringue", readonly = true, required = true)
     private File temporaryDirectory;
 
-    Duration getDuration() {
+    protected Duration getDuration() {
         return Duration.parse(duration);
     }
 
-    CampaignConfiguration createConfiguration() throws MojoExecutionException {
+    protected CampaignConfiguration createConfiguration() throws MojoExecutionException {
         return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(), javaOptions,
                                          createTestJar(), javaExec);
     }
 
-    Set<File> getTestClasspathElements() throws MojoExecutionException {
+    protected Set<File> getTestClasspathElements() throws MojoExecutionException {
         try {
             return project.getTestClasspathElements()
                           .stream()
@@ -91,11 +91,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
-    File getTemporaryDirectory() {
+    protected File getTemporaryDirectory() {
         return temporaryDirectory;
     }
 
-    void initialize() throws MojoExecutionException {
+    protected void initialize() throws MojoExecutionException {
         validateJavaExec();
         try {
             FileUtil.ensureDirectory(outputDirectory);
@@ -126,19 +126,19 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
         }
     }
 
-    String getFramework() {
+    protected String getFramework() {
         return framework;
     }
 
-    File getOutputDirectory() {
+    protected File getOutputDirectory() {
         return outputDirectory;
     }
 
-    MavenProject getProject() {
+    protected MavenProject getProject() {
         return project;
     }
 
-    Properties getFrameworkArguments() {
+    protected Properties getFrameworkArguments() {
         return frameworkArguments;
     }
 
