@@ -24,7 +24,8 @@ public final class ProcessUtil {
     }
 
     /**
-     * Waits until the specified process has terminated or the specified waiting time has elapsed.
+     * Waits until the specified process has terminated or the specified waiting time has elapsed and then stops the
+     * specified process if it has not yet terminated.
      *
      * @param timeout the maximum amount of time to wait
      * @param unit    the time unit of the timeout argument

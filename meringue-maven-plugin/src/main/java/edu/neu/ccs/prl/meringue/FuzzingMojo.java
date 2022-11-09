@@ -5,8 +5,6 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 
-import java.io.IOException;
-
 /**
  * Maven plugin that runs a fuzzing campaign.
  */
@@ -15,13 +13,6 @@ import java.io.IOException;
 public class FuzzingMojo extends AbstractMeringueMojo {
     @Override
     public void execute() throws MojoExecutionException {
-        try {
-            FileUtil.ensureEmptyDirectory(getOutputDirectory());
-            initialize();
-            new CampaignRunner(getLog(), getDuration())
-                    .run(createConfiguration(), getFramework(), getFrameworkArguments());
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to execute fuzzing campaign", e);
-        }
+        fuzz();
     }
 }

@@ -1,25 +1,22 @@
 package edu.neu.ccs.prl.meringue;
 
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.ResolutionErrorHandler;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.surefire.SurefireHelper;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.surefire.booter.SystemUtils;
+import org.apache.maven.repository.RepositorySystem;
 
 import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-abstract class AbstractMeringueMojo extends AbstractMojo {
-    /**
-     * Current Maven project.
-     */
-    @Parameter(defaultValue = "${project}", readonly = true, required = true)
-    private MavenProject project;
+abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValues {
     /**
      * Directory to which output files should be written.
      */
@@ -65,99 +62,103 @@ abstract class AbstractMeringueMojo extends AbstractMojo {
      */
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
-    /**
-     * Directory used to store internal temporary files created by Meringue.
-     */
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    private MavenSession session;
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
+    private MavenProject project;
     @Parameter(defaultValue = "${project.build.directory}/temp/meringue", readonly = true, required = true)
     private File temporaryDirectory;
+    @Parameter(property = "plugin.artifactMap", required = true, readonly = true)
+    private Map<String, Artifact> pluginArtifactMap;
+    @Parameter(defaultValue = "${localRepository}", required = true, readonly = true)
+    private ArtifactRepository localRepository;
+    @Component
+    private ResolutionErrorHandler errorHandler;
+    @Component
+    private RepositorySystem repositorySystem;
 
-    protected Duration getDuration() {
-        return Duration.parse(duration);
+    @Override
+    public MavenSession getSession() {
+        return session;
     }
 
-    protected CampaignConfiguration createConfiguration() throws MojoExecutionException {
-        return new CampaignConfiguration(testClass, testMethod, getDuration(), getCampaignDirectory(), javaOptions,
-                                         createTestJar(), javaExec);
-    }
-
-    protected Set<File> getTestClasspathElements() throws MojoExecutionException {
-        try {
-            return project.getTestClasspathElements()
-                          .stream()
-                          .map(File::new)
-                          .collect(Collectors.toSet());
-        } catch (DependencyResolutionRequiredException e) {
-            throw new MojoExecutionException("Required test dependency was not resolved", e);
-        }
-    }
-
-    protected File getTemporaryDirectory() {
-        return temporaryDirectory;
-    }
-
-    protected void initialize() throws MojoExecutionException {
-        validateJavaExec();
-        try {
-            FileUtil.ensureDirectory(outputDirectory);
-            FileUtil.ensureDirectory(temporaryDirectory);
-            FileUtil.ensureDirectory(getCampaignDirectory());
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to initialize output directory", e);
-        }
-    }
-
-    private void validateJavaExec() throws MojoExecutionException {
-        if (!SystemUtils.endsWithJavaPath(javaExec.getAbsolutePath()) || !javaExec.isFile()) {
-            throw new MojoExecutionException("Invalid Java executable: " + javaExec);
-        }
-    }
-
-    private File getCampaignDirectory() {
-        return new File(outputDirectory, "campaign");
-    }
-
-    private File createTestJar() throws MojoExecutionException {
-        try {
-            File jar = new File(temporaryDirectory, "test.jar");
-            FileUtil.buildManifestJar(getTestClasspathElements(), jar);
-            return jar;
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to create test manifest JAR", e);
-        }
-    }
-
-    protected String getFramework() {
-        return framework;
-    }
-
-    protected File getOutputDirectory() {
-        return outputDirectory;
-    }
-
-    protected MavenProject getProject() {
+    @Override
+    public MavenProject getProject() {
         return project;
     }
 
-    protected Properties getFrameworkArguments() {
+    @Override
+    public File getOutputDirectory() {
+        return outputDirectory;
+    }
+
+    @Override
+    public String getTestClassName() {
+        return testClass;
+    }
+
+    @Override
+    public String getTestMethodName() {
+        return testMethod;
+    }
+
+    @Override
+    public File getJavaExecutable() {
+        return javaExec;
+    }
+
+    @Override
+    public String getFrameworkClassName() {
+        return framework;
+    }
+
+    @Override
+    public Properties getFrameworkArguments() {
         return frameworkArguments;
     }
 
-    public static FuzzFramework createFramework(CampaignConfiguration config, String frameworkName,
-                                                Properties frameworkArguments) throws MojoExecutionException {
-        try {
-            FuzzFramework instance =
-                    (FuzzFramework) Class.forName(frameworkName).getDeclaredConstructor().newInstance();
-            instance.initialize(config, frameworkArguments);
-            return instance;
-        } catch (ClassCastException | ReflectiveOperationException | IOException e) {
-            throw new MojoExecutionException("Failed to create fuzzing framework instance", e);
-        }
+    @Override
+    public List<String> getJavaOptions() {
+        return javaOptions;
     }
 
-    public static String buildClassPath(File... classPathElements) {
-        return Arrays.stream(classPathElements)
-                     .map(File::getAbsolutePath)
-                     .map(SurefireHelper::escapeToPlatformPath)
-                     .collect(Collectors.joining(File.pathSeparator));
+    @Override
+    public String getDurationString() {
+        return duration;
+    }
+
+    @Override
+    public File getTemporaryDirectory() {
+        return temporaryDirectory;
+    }
+
+    @Override
+    public ArtifactRepository getLocalRepository() {
+        return localRepository;
+    }
+
+    @Override
+    public Map<String, Artifact> getPluginArtifactMap() {
+        return pluginArtifactMap;
+    }
+
+    @Override
+    public ResolutionErrorHandler getErrorHandler() {
+        return errorHandler;
+    }
+
+    @Override
+    public RepositorySystem getRepositorySystem() {
+        return repositorySystem;
+    }
+
+    @Override
+    public Map<String, String> getEnvironment() {
+        return null;
+    }
+
+    @Override
+    public File getWorkingDirectory() {
+        return null;
     }
 }

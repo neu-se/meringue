@@ -12,7 +12,7 @@ public final class CampaignConfiguration implements Serializable {
      * <p>
      * Non-null.
      */
-    private final File outputDir;
+    private final File outputDirectory;
     /**
      * Fully-qualified name of the test class.
      * <p>
@@ -32,13 +32,13 @@ public final class CampaignConfiguration implements Serializable {
      * <p>
      * Non-null.
      */
-    private final File javaExec;
+    private final File javaExecutable;
     /**
-     * JAR file containing all necessary class path elements for test JVMs.
+     * JAR file containing all necessary classpath elements for test JVMs.
      * <p>
      * Non-null.
      */
-    private final File testClassPathJar;
+    private final File testClasspathJar;
     /**
      * Maximum amount of time to execute the campaign for.
      * <p>
@@ -64,36 +64,30 @@ public final class CampaignConfiguration implements Serializable {
      *
      * @see ProcessBuilder#directory()
      */
-    private final File workingDir;
+    private final File workingDirectory;
 
-    public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
-                                 List<String> javaOptions, File testClassPathJar, File javaExec, File workingDir,
-                                 Map<String, String> environment) {
-        if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative() || !outputDir.isDirectory() ||
-                !testClassPathJar.isFile() || !javaExec.isFile() || (workingDir != null && !workingDir.isDirectory())) {
+    public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDirectory,
+                                 List<String> javaOptions, File testClasspathJar, File javaExecutable,
+                                 File workingDirectory, Map<String, String> environment) {
+        if (testClassName.isEmpty() || testMethodName.isEmpty() || duration.isNegative() ||
+                !outputDirectory.isDirectory() || !testClasspathJar.isFile() || !javaExecutable.isFile() ||
+                (workingDirectory != null && !workingDirectory.isDirectory())) {
             throw new IllegalArgumentException();
         }
         this.testClassName = testClassName;
         this.testMethodName = testMethodName;
         this.duration = duration;
-        this.outputDir = outputDir;
+        this.outputDirectory = outputDirectory;
         this.javaOptions = Collections.unmodifiableList(new ArrayList<>(javaOptions));
         for (String option : javaOptions) {
             if (option == null) {
                 throw new NullPointerException();
             }
         }
-        this.testClassPathJar = testClassPathJar;
-        this.javaExec = javaExec;
+        this.testClasspathJar = testClasspathJar;
+        this.javaExecutable = javaExecutable;
         this.environment = environment == null ? null : Collections.unmodifiableMap(new HashMap<>(environment));
-        this.workingDir = workingDir;
-    }
-
-
-    public CampaignConfiguration(String testClassName, String testMethodName, Duration duration, File outputDir,
-                                 List<String> javaOptions, File testClassPathJar, File javaExec) {
-        this(testClassName, testMethodName, duration, outputDir, javaOptions, testClassPathJar, javaExec,
-             null, null);
+        this.workingDirectory = workingDirectory;
     }
 
     public Duration getDuration() {
@@ -104,12 +98,12 @@ public final class CampaignConfiguration implements Serializable {
         return javaOptions;
     }
 
-    public File getTestClassPathJar() {
-        return testClassPathJar;
+    public File getTestClasspathJar() {
+        return testClasspathJar;
     }
 
-    public File getOutputDir() {
-        return outputDir;
+    public File getOutputDirectory() {
+        return outputDirectory;
     }
 
     public String getTestClassName() {
@@ -124,15 +118,15 @@ public final class CampaignConfiguration implements Serializable {
         return testClassName + "#" + testMethodName;
     }
 
-    public File getJavaExec() {
-        return javaExec;
+    public File getJavaExecutable() {
+        return javaExecutable;
     }
 
     public Map<String, String> getEnvironment() {
         return environment;
     }
 
-    public File getWorkingDir() {
-        return workingDir;
+    public File getWorkingDirectory() {
+        return workingDirectory;
     }
 }

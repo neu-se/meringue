@@ -2,7 +2,6 @@ package edu.neu.ccs.prl.meringue;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -17,22 +16,21 @@ import java.util.jar.Manifest;
 
 public final class FileUtil {
     private FileUtil() {
-        throw new AssertionError(getClass().getSimpleName() + " is a static utility class and should " +
-                                         "not be instantiated");
+        throw new AssertionError();
     }
 
     /**
      * Creates a Java Archive (JAR) file containing only a manifest that specifies a value for the Class-Path
      * attribute.
      *
-     * @param classPathElements elements to be included on the class path
+     * @param classpathElements elements to be included on the classpath
      * @param jar               the JAR file that should be created
      * @throws IOException          if an I/O error occurs
-     * @throws NullPointerException if {@code classPathElements} is null, an element of {@code classPathElements} is
+     * @throws NullPointerException if {@code classpathElements} is null, an element of {@code classpathElements} is
      *                              null, or {@code jar} is null.
      */
-    public static void buildManifestJar(Collection<File> classPathElements, File jar) throws IOException {
-        Set<File> classPathFilesCopy = new HashSet<>(classPathElements);
+    public static void buildManifestJar(Collection<File> classpathElements, File jar) throws IOException {
+        Set<File> classPathFilesCopy = new HashSet<>(classpathElements);
         String[] paths = classPathFilesCopy.stream()
                                            .map(f -> f.isFile() ? f.getAbsolutePath() : f.getAbsolutePath() + "/")
                                            .toArray(String[]::new);
@@ -40,7 +38,8 @@ public final class FileUtil {
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().putValue("Manifest-Version", "1.0");
         manifest.getMainAttributes().putValue("Class-Path", String.join(" ", paths));
-        JarOutputStream jos = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(jar)), manifest);
+        JarOutputStream jos =
+                new JarOutputStream(new BufferedOutputStream(Files.newOutputStream(jar.toPath())), manifest);
         jos.close();
     }
 

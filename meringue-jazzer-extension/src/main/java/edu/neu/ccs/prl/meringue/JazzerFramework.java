@@ -20,7 +20,7 @@ public final class JazzerFramework implements FuzzFramework {
 
     @Override
     public void initialize(CampaignConfiguration config, Properties frameworkArguments) throws IOException {
-        outputDir = config.getOutputDir();
+        outputDir = config.getOutputDirectory();
         corpusDir = new File(outputDir, "corpus");
         reproducerDir = new File(outputDir, "reproducer");
         workingDir = new File(outputDir, "out");
@@ -32,7 +32,7 @@ public final class JazzerFramework implements FuzzFramework {
             builder.environment().clear();
             builder.environment().putAll(config.getEnvironment());
         }
-        builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExec()).getAbsolutePath());
+        builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExecutable()).getAbsolutePath());
     }
 
     @Override
@@ -94,7 +94,7 @@ public final class JazzerFramework implements FuzzFramework {
                                               File outputDir, File reproducerDir, File corpusDir) throws IOException {
         List<String> command = new LinkedList<>();
         command.add(getJazzerExecutable(outputDir).getAbsolutePath());
-        String classPath = config.getTestClassPathJar().getAbsolutePath() + File.pathSeparator +
+        String classPath = config.getTestClasspathJar().getAbsolutePath() + File.pathSeparator +
                 FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
         command.add("--cp=" + classPath);
         if (config.getTestMethodName().equals("fuzzerTestOneInput")) {

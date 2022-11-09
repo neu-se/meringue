@@ -100,6 +100,10 @@ class CoverageCalculator {
         return locator;
     }
 
+    public CoverageFilter getFilter() {
+        return filter;
+    }
+
     private static boolean isArchive(String name) {
         return name.endsWith(".jar") || name.endsWith(".war") || name.endsWith(".zip");
     }

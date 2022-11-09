@@ -1,12 +1,10 @@
 package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
 
-import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -15,12 +13,7 @@ import java.util.List;
  */
 @Mojo(name = "analyze", defaultPhase = LifecyclePhase.POST_INTEGRATION_TEST,
         requiresDependencyResolution = ResolutionScope.TEST)
-public class AnalysisMojo extends AbstractMeringueMojo {
-    /**
-     * The Maven session.
-     */
-    @Parameter(defaultValue = "${session}", readonly = true, required = true)
-    protected MavenSession session;
+public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues {
     /**
      * List of artifacts (in the form groupId:artifactId) to be included in coverage and JaCoCo reports. By default, all
      * test classpath artifacts are included.
@@ -75,20 +68,56 @@ public class AnalysisMojo extends AbstractMeringueMojo {
 
     @Override
     public void execute() throws MojoExecutionException {
-        initialize();
-        createRunner().run(createConfiguration(), getFramework(), getFrameworkArguments(), getJacocoFormats());
+        analyze();
     }
 
-    protected List<JacocoReportFormat> getJacocoFormats() {
+    @Override
+    public List<String> getIncludedArtifacts() {
+        return includedArtifacts;
+    }
+
+    @Override
+    public List<String> getInclusions() {
+        return inclusions;
+    }
+
+    @Override
+    public List<String> getExclusions() {
+        return exclusions;
+    }
+
+    @Override
+    public int getMaxTraceSize() {
+        return maxTraceSize;
+    }
+
+    @Override
+    public boolean isDebug() {
+        return debug;
+    }
+
+    @Override
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    @Override
+    public List<JacocoReportFormat> getJacocoFormats() {
         return jacocoFormats;
     }
 
-    protected AnalysisRunner createRunner() {
-        ArtifactSourceResolver resolver =
-                new ArtifactSourceResolver(getLog(), session, artifactResolver, artifactHandlerManager);
-        CoverageFilter filter = new CoverageFilter(inclusions, exclusions, includedArtifacts, getProject(), resolver);
-        return new AnalysisRunner(getLog(), debug, verbose, Duration.ofMillis(timeout),
-                                  maxTraceSize, filter,
-                                  getOutputDirectory(), getTemporaryDirectory());
+    @Override
+    public long getTimeout() {
+        return timeout;
+    }
+
+    @Override
+    public ArtifactResolver getArtifactResolver() {
+        return artifactResolver;
+    }
+
+    @Override
+    public ArtifactHandlerManager getArtifactHandlerManager() {
+        return artifactHandlerManager;
     }
 }
