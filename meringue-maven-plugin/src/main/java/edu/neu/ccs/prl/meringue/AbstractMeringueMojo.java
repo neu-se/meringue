@@ -5,6 +5,7 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ResolutionErrorHandler;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -78,87 +79,87 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     private RepositorySystem repositorySystem;
 
     @Override
-    public MavenSession getSession() {
+    public MavenSession getSession() throws MojoExecutionException {
         return session;
     }
 
     @Override
-    public MavenProject getProject() {
+    public MavenProject getProject() throws MojoExecutionException {
         return project;
     }
 
     @Override
-    public File getOutputDirectory() {
+    public File getOutputDirectory() throws MojoExecutionException {
         return outputDirectory;
     }
 
     @Override
-    public String getTestClassName() {
+    public String getTestClassName() throws MojoExecutionException {
         return testClass;
     }
 
     @Override
-    public String getTestMethodName() {
+    public String getTestMethodName() throws MojoExecutionException {
         return testMethod;
     }
 
     @Override
-    public File getJavaExecutable() {
+    public File getJavaExecutable() throws MojoExecutionException {
         return javaExec;
     }
 
     @Override
-    public String getFrameworkClassName() {
+    public String getFrameworkClassName() throws MojoExecutionException {
         return framework;
     }
 
     @Override
-    public Properties getFrameworkArguments() {
+    public Properties getFrameworkArguments() throws MojoExecutionException {
         return frameworkArguments;
     }
 
     @Override
-    public List<String> getJavaOptions() {
+    public List<String> getJavaOptions() throws MojoExecutionException {
         return javaOptions;
     }
 
     @Override
-    public String getDurationString() {
+    public String getDurationString() throws MojoExecutionException {
         return duration;
     }
 
     @Override
-    public File getTemporaryDirectory() {
+    public File getTemporaryDirectory() throws MojoExecutionException {
         return temporaryDirectory;
     }
 
     @Override
-    public ArtifactRepository getLocalRepository() {
+    public ArtifactRepository getLocalRepository() throws MojoExecutionException {
         return localRepository;
     }
 
     @Override
-    public Map<String, Artifact> getPluginArtifactMap() {
+    public Map<String, Artifact> getPluginArtifactMap() throws MojoExecutionException {
         return pluginArtifactMap;
     }
 
     @Override
-    public ResolutionErrorHandler getErrorHandler() {
+    public ResolutionErrorHandler getErrorHandler() throws MojoExecutionException {
         return errorHandler;
     }
 
     @Override
-    public RepositorySystem getRepositorySystem() {
+    public RepositorySystem getRepositorySystem() throws MojoExecutionException {
         return repositorySystem;
     }
 
     @Override
-    public Map<String, String> getEnvironment() {
+    public Map<String, String> getEnvironment() throws MojoExecutionException {
         return null;
     }
 
     @Override
-    public File getWorkingDirectory() {
+    public File getWorkingDirectory() throws MojoExecutionException {
         return null;
     }
 }
