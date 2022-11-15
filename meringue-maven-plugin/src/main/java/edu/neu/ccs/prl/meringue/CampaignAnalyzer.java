@@ -1,5 +1,8 @@
 package edu.neu.ccs.prl.meringue;
 
+import edu.neu.ccs.prl.meringue.report.CoverageReport;
+import edu.neu.ccs.prl.meringue.report.FailureReport;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -10,25 +13,27 @@ import java.util.TimerTask;
 
 final class CampaignAnalyzer implements Closeable {
     private final JvmLauncher launcher;
-    private final CampaignReport report;
+    private final CoverageReport coverageReport;
     private final long timeout;
     private final ServerSocket server;
+    private final FailureReport failureReport;
     private ForkConnection connection;
     private Process process;
 
-    CampaignAnalyzer(JvmLauncher launcher, CampaignReport report, long timeout) throws IOException {
+    CampaignAnalyzer(JvmLauncher launcher, CoverageReport coverageReport, FailureReport failureReport, long timeout)
+            throws IOException {
         if (timeout < -1) {
             throw new IllegalArgumentException();
         }
-        this.report = report;
+        if (launcher == null || coverageReport == null || failureReport == null) {
+            throw new NullPointerException();
+        }
+        this.coverageReport = coverageReport;
+        this.failureReport = failureReport;
         this.timeout = timeout;
         // Create a server socket bound to an automatically allocated port
         this.server = new ServerSocket(0);
         this.launcher = launcher.appendArguments(String.valueOf(server.getLocalPort()));
-    }
-
-    CampaignReport getReport() {
-        return report;
     }
 
     private void restartConnection() throws IOException {
@@ -43,7 +48,7 @@ final class CampaignAnalyzer implements Closeable {
         return connection != null && !connection.isClosed();
     }
 
-    void analyze(File inputFile) throws IOException, ClassNotFoundException {
+    void analyze(File inputFile) throws IOException {
         if (!isConnected()) {
             restartConnection();
         }
@@ -51,14 +56,12 @@ final class CampaignAnalyzer implements Closeable {
         try {
             connection.send(inputFile);
             byte[] execData = connection.receive(byte[].class);
-            StackTraceElement[] trace = null;
-            if (connection.receive(Boolean.class)) {
-                trace = connection.receive(StackTraceElement[].class);
-            }
+            Failure failure = connection.receive(Boolean.class) ? connection.receive(Failure.class) : null;
             if (timer != null) {
                 timer.cancel();
             }
-            report.record(inputFile, execData, trace);
+            failureReport.record(inputFile, failure);
+            coverageReport.record(inputFile, execData);
         } catch (Throwable t) {
             // Input caused fork to fail
             closeConnection();
@@ -80,7 +83,6 @@ final class CampaignAnalyzer implements Closeable {
             }
         }, Duration.ofSeconds(timeout).toMillis());
         return timer;
-
     }
 
     private void closeConnection() {

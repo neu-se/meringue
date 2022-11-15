@@ -5,6 +5,9 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.util.*;
 
+/**
+ * Configuration for a fuzzing campaign. Immutable.
+ */
 public final class CampaignConfiguration implements Serializable {
     private static final long serialVersionUID = -1880940974469925517L;
     /**

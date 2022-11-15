@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-class CoverageCalculator {
+public class CoverageCalculator {
     final CoverageFilter filter;
     private final Map<Long, byte[]> idBufferMap = new HashMap<>();
     private final File temporaryDirectory;

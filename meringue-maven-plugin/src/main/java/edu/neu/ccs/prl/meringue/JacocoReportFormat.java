@@ -13,22 +13,22 @@ import java.nio.file.Files;
 public enum JacocoReportFormat {
     HTML() {
         @Override
-        IReportVisitor createVisitor(File outputDirectory) throws IOException {
+        public IReportVisitor createVisitor(File outputDirectory) throws IOException {
             return new HTMLFormatter().createVisitor(new FileMultiReportOutput(new File(outputDirectory, "html")));
         }
     }, CSV() {
         @Override
-        IReportVisitor createVisitor(File outputDirectory) throws IOException {
+        public IReportVisitor createVisitor(File outputDirectory) throws IOException {
             return new CSVFormatter().createVisitor(
                     Files.newOutputStream(new File(outputDirectory, "jacoco.csv").toPath()));
         }
     }, XML() {
         @Override
-        IReportVisitor createVisitor(File outputDirectory) throws IOException {
+        public IReportVisitor createVisitor(File outputDirectory) throws IOException {
             return new XMLFormatter().createVisitor(
                     Files.newOutputStream(new File(outputDirectory, "jacoco.xml").toPath()));
         }
     };
 
-    abstract IReportVisitor createVisitor(File outputDirectory) throws IOException;
+    public abstract IReportVisitor createVisitor(File outputDirectory) throws IOException;
 }

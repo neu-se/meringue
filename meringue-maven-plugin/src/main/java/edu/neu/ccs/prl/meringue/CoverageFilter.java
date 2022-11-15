@@ -11,9 +11,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class CoverageFilter {
-    private final List<String> inclusions;
-    private final List<String> exclusions;
-    private final Set<String> includedArtifacts;
+    private final ClassFilter classFilter;
     private final MavenProject project;
     private final WildcardMatcher includes;
     private final WildcardMatcher excludes;
@@ -21,26 +19,27 @@ public final class CoverageFilter {
 
     public CoverageFilter(Collection<String> inclusions, Collection<String> exclusions,
                           List<String> includedArtifacts, MavenProject project, ArtifactSourceResolver resolver) {
-        this.inclusions = inclusions == null ? Collections.emptyList() : new ArrayList<>(inclusions);
-        this.exclusions = exclusions == null ? Collections.emptyList() : new ArrayList<>(exclusions);
-        this.includedArtifacts =
-                includedArtifacts == null ? Collections.emptySet() : new HashSet<>(includedArtifacts);
+        this.classFilter = new ClassFilter(inclusions, exclusions, includedArtifacts);
         this.project = project;
         this.resolver = resolver;
-        this.includes =
-                new WildcardMatcher(toVMName(this.inclusions.isEmpty() ? "*" : String.join(":", this.inclusions)));
-        this.excludes = new WildcardMatcher(toVMName(String.join(":", this.exclusions)));
+        String includeString = classFilter.getIncludeString();
+        this.includes = new WildcardMatcher(toVMName(includeString.isEmpty() ? "*" : includeString));
+        this.excludes = new WildcardMatcher(toVMName(classFilter.getExcludeString()));
+    }
+
+    public ClassFilter getClassFilter() {
+        return classFilter;
     }
 
     public Set<File> getIncludedArtifacts() {
         Set<File> result = new HashSet<>();
-        if (shouldIncludeArtifact(project.getGroupId(), project.getArtifactId())
+        if (classFilter.isIncludedArtifact(project.getGroupId(), project.getArtifactId())
                 && project.getBuild().getOutputDirectory() != null) {
             result.add(new File(project.getBuild().getOutputDirectory()));
         }
         project.getArtifacts()
                .stream()
-               .filter(a -> shouldIncludeArtifact(a) && a.getArtifactHandler().isAddedToClasspath())
+               .filter(a -> classFilter.isIncludedArtifact(a) && a.getArtifactHandler().isAddedToClasspath())
                .map(Artifact::getFile)
                .filter(Objects::nonNull)
                .forEach(result::add);
@@ -53,7 +52,7 @@ public final class CoverageFilter {
         sources.add(new File(project.getBuild().getSourceDirectory()));
         sources.addAll(resolver.getSources(project, project.getArtifacts()
                                                            .stream()
-                                                           .filter(a -> shouldIncludeArtifact(a) &&
+                                                           .filter(a -> classFilter.isIncludedArtifact(a) &&
                                                                    a.getArtifactHandler().isAddedToClasspath())
                                                            .collect(Collectors.toSet())));
         sources.removeIf(f -> f == null || !f.exists());
@@ -62,14 +61,6 @@ public final class CoverageFilter {
 
     boolean filter(String className) {
         return includes.matches(className) && !excludes.matches(className);
-    }
-
-    private boolean shouldIncludeArtifact(Artifact artifact) {
-        return shouldIncludeArtifact(artifact.getGroupId(), artifact.getArtifactId());
-    }
-
-    private boolean shouldIncludeArtifact(String groupId, String artifactId) {
-        return includedArtifacts.isEmpty() || includedArtifacts.contains(groupId + ":" + artifactId);
     }
 
     public CoverageCalculator createCoverageCalculator(File temporaryDirectory) throws IOException {
@@ -86,11 +77,13 @@ public final class CoverageFilter {
             throw new IllegalStateException("JaCoCo agent jar does not exist: " + agentJar);
         }
         String opt = String.format("-javaagent:%s=output=none", agentJar.getAbsolutePath());
-        if (!exclusions.isEmpty()) {
-            opt += ",excludes=" + String.join(":", exclusions);
+        String excludeString = classFilter.getExcludeString();
+        if (!excludeString.isEmpty()) {
+            opt += ",excludes=" + excludeString;
         }
-        if (!inclusions.isEmpty()) {
-            opt += ",includes=" + String.join(":", inclusions);
+        String includeString = classFilter.getIncludeString();
+        if (!includeString.isEmpty()) {
+            opt += ",includes=" + includeString;
         }
         return opt;
     }

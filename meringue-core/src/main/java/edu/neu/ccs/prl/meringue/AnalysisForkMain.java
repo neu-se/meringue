@@ -3,7 +3,7 @@ package edu.neu.ccs.prl.meringue;
 public final class AnalysisForkMain {
     private AnalysisForkMain() {
         throw new AssertionError(
-                getClass().getSimpleName() + " is a static utility class and should " + "not be instantiated");
+                getClass().getSimpleName() + " is a static utility class and should not be instantiated");
     }
 
     public static void main(String[] args) throws Throwable {

@@ -1,12 +1,13 @@
 package edu.neu.ccs.prl.meringue;
 
+import edu.neu.ccs.prl.meringue.report.CoverageReport;
+import edu.neu.ccs.prl.meringue.report.FailureReport;
+import edu.neu.ccs.prl.meringue.report.SummaryReport;
 import org.apache.maven.plugin.MojoExecutionException;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -36,61 +37,83 @@ public class AnalysisRunner {
 
     private void run(FuzzFramework framework, CampaignConfiguration configuration)
             throws MojoExecutionException, IOException, ReflectiveOperationException {
-        File[] inputFiles = collectInputFiles(framework);
-        if (inputFiles.length == 0) {
-            values.getLog().info("No input files were found for analysis");
-        }
         framework.startingAnalysis();
         CoverageCalculator calculator = values.createCoverageCalculator();
-        JvmLauncher launcher = values.createAnalysisLauncher(calculator.getFilter().getJacocoOption(),
-                                                             configuration, framework);
-        CampaignReport report = new CampaignReport(calculator);
-        try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, report, values.getTimeout())) {
+        JvmLauncher launcher =
+                values.createAnalysisLauncher(calculator.getFilter().getJacocoOption(), configuration, framework);
+        File[] inputFiles = collectInputFiles(framework);
+        long firstTimestamp = inputFiles.length == 0 ? 0 : inputFiles[0].lastModified();
+        CoverageReport coverageReport = new CoverageReport(calculator, firstTimestamp);
+        FailureReport failureReport = new FailureReport(firstTimestamp);
+        analyze(inputFiles, launcher, coverageReport, failureReport);
+        SummaryReport summaryReport = new SummaryReport(
+                configuration,
+                framework.getClass().getName(),
+                calculator.getFilter().getClassFilter(),
+                values.getMaxTraceSize(),
+                Duration.ofSeconds(values.getTimeout()),
+                coverageReport.getTotalBranches(),
+                coverageReport.getCoveredBranches(),
+                failureReport.getNumberOfUniqueFailures()
+        );
+        logResults(summaryReport);
+        writeSummaryReport(summaryReport);
+        writeCoverageReport(coverageReport);
+        writeFailureReport(failureReport);
+        writeJacocoReports(configuration, coverageReport);
+    }
+
+    private void analyze(File[] inputFiles, JvmLauncher launcher, CoverageReport coverageReport,
+                         FailureReport failureReport) throws IOException, MojoExecutionException {
+        if (inputFiles.length == 0) {
+            values.getLog().info("No input files were found for analysis");
+            return;
+        }
+        try (CampaignAnalyzer analyzer = new CampaignAnalyzer(launcher, coverageReport, failureReport,
+                                                              values.getTimeout())) {
             for (int i = 0; i < inputFiles.length; i++) {
                 analyzer.analyze(inputFiles[i]);
                 if ((i + 1) % 100 == 1) {
                     values.getLog().info(String.format("Analyzed %d/%d input files", i + 1, inputFiles.length));
                 }
             }
-            report = analyzer.getReport();
-        }
-        writeReports(configuration, calculator, report);
-    }
-
-    private void writeReports(CampaignConfiguration configuration, CoverageCalculator calculator, CampaignReport report)
-            throws IOException, MojoExecutionException {
-        report.print(values.getLog());
-        File summaryFile = new File(values.getOutputDirectory(), "config.txt");
-        values.getLog().info("Writing configuration information to: " + summaryFile);
-        writeConfigurationInfo(configuration, summaryFile, calculator.getTotalBranches());
-        File coverageReportFile = new File(values.getOutputDirectory(), "coverage.csv");
-        File failuresReportFile = new File(values.getOutputDirectory(), "failures.txt");
-        values.getLog().info("Writing coverage report to: " + coverageReportFile);
-        values.getLog().info("Writing failures report to: " + failuresReportFile);
-        report.write(coverageReportFile, failuresReportFile);
-        File reportDirectory = new File(values.getOutputDirectory(), "jacoco");
-        FileUtil.ensureEmptyDirectory(reportDirectory);
-        values.getLog().info("Writing JaCoCo reports to: " + reportDirectory);
-        for (JacocoReportFormat f : values.getJacocoFormats()) {
-            report.writeReport(values.getTestDescription(), reportDirectory, f);
         }
     }
 
-    private void writeConfigurationInfo(CampaignConfiguration configuration, File file, long totalBranches)
-            throws IOException, MojoExecutionException {
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(Files.newOutputStream(file.toPath())))) {
-            out.printf("test_class_name: %s%n", configuration.getTestClassName());
-            out.printf("test_method_name: %s%n", configuration.getTestMethodName());
-            out.printf("duration_ms: %s%n", configuration.getDuration().toMillis());
-            out.printf("framework: %s%n", values.getFrameworkClassName());
-            out.printf("java_executable: %s%n", configuration.getJavaExecutable().getAbsolutePath());
-            String javaOptionsString =
-                    String.join(" ", configuration.getJavaOptions()).replaceAll(System.getProperty("line.separator"),
-                                                                                " ");
-            out.printf("java_options: %s%n", javaOptionsString);
-            out.printf("replay_timeout: %d%n", values.getTimeout());
-            out.printf("total_branches: %d%n", totalBranches);
-        }
+    private void logResults(SummaryReport report) throws MojoExecutionException {
+        long covered = report.getNumberOfCoveredBranches();
+        long total = report.getTotalBranches();
+        values.getLog().info(String.format("Hit branches: %d/%d = %.7f", covered, total, (1.0 * covered) / total));
+        values.getLog().info("Unique failures observed: " + report.getNumberOfUniqueFailures());
+    }
+
+    private void writeJacocoReports(CampaignConfiguration configuration, CoverageReport report)
+            throws MojoExecutionException, IOException {
+        File directory = new File(values.getOutputDirectory(), "jacoco");
+        FileUtil.ensureEmptyDirectory(directory);
+        values.getLog().info("Writing JaCoCo reports to: " + directory);
+        report.writeJacocoReports(configuration.getTestDescription(), directory, values.getJacocoFormats());
+    }
+
+    private void writeCoverageReport(CoverageReport report) throws MojoExecutionException, IOException {
+        File file = new File(values.getOutputDirectory(), "coverage.csv");
+        values.getLog().info("Writing coverage report to: " + file);
+        report.write(file);
+    }
+
+    private void writeFailureReport(FailureReport report) throws MojoExecutionException, IOException {
+        File file = new File(values.getOutputDirectory(), "failures.json");
+        values.getLog().info("Writing failure report to: " + file);
+        report.write(file);
+    }
+
+    private void writeSummaryReport(SummaryReport report) throws IOException, MojoExecutionException {
+        File file = new File(values.getOutputDirectory(), "summary.json");
+        values.getLog().info("Writing summary report to: " + file);
+        report.write(file);
+        File legacyFile = new File(values.getOutputDirectory(), "config.txt");
+        values.getLog().info("Writing legacy summary report to: " + legacyFile);
+        report.writeLegacyReport(legacyFile);
     }
 
     private static File[] collectInputFiles(FuzzFramework framework) throws IOException {
