@@ -95,6 +95,8 @@ public interface AnalysisValues extends CampaignValues {
         List<String> options = new LinkedList<>(configuration.getJavaOptions());
         // Set property to indicate that the analysis phase is running
         options.add("-Dmeringue.analysis=true");
+        // Prevent stack traces from being omitted
+        options.add("-XX:-OmitStackTraceInFastThrow");
         if (isDebug()) {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
