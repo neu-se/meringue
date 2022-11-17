@@ -36,6 +36,7 @@ public final class ClassFilter {
     }
 
     public boolean isIncludedArtifact(String groupId, String artifactId) {
-        return includedArtifacts.isEmpty() || includedArtifacts.contains(groupId + ":" + artifactId);
+        return includedArtifacts.isEmpty() || includedArtifacts.contains(groupId + ":" + artifactId) ||
+                includedArtifacts.contains(groupId + ":" + "*");
     }
 }
