@@ -116,7 +116,9 @@ public class ZestFramework implements JarFuzzFramework {
             out.println("janala.excludes=" + String.join(",",
                                                          "java/",
                                                          "com/sun/proxy/",
-                                                         "edu/berkeley/cs/jqf/"));
+                                                         "edu/berkeley/cs/jqf/",
+                                                         "edu/neu/ccs/prl/meringue/ZestForkMain",
+                                                         "org/junit/"));
             out.println("janala.includes=" + String.join(",",
                                                          "edu/berkeley/cs/jqf/examples",
                                                          "java/text",
