@@ -35,24 +35,15 @@ public final class ReplayerManager implements Closeable {
         // Send current JaCoCo coverage
         connection.send(RT.getAgent().getExecutionData(false));
         // Send the failure
-        Failure wrappedFailure = wrap(failure);
-        if (wrappedFailure == null) {
+        if (failure == null) {
             connection.send(false);
         } else {
+            Throwable rootCause = cleaner.getRootCause(failure);
+            StackTraceElement[] trace = cleaner.cleanStackTrace(rootCause).toArray(new StackTraceElement[0]);
             connection.send(true);
-            connection.send(wrappedFailure);
+            connection.send(new Failure(rootCause.getClass().getName(), trace));
+            connection.send(rootCause.getMessage());
         }
-    }
-
-    private Failure wrap(Throwable failure) {
-        if (failure != null) {
-            try {
-                return new Failure(failure, cleaner);
-            } catch (Throwable t) {
-                // This hopefully should not happen but there is not much we can do about it
-            }
-        }
-        return null;
     }
 
     @Override

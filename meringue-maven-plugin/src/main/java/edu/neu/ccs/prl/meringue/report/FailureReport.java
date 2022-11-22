@@ -17,11 +17,11 @@ public final class FailureReport {
         this.firstTimestamp = firstTimestamp;
     }
 
-    public void record(File inputFile, Failure failure) {
+    public void record(File inputFile, Failure failure, String failureMessage) {
         if (failure != null) {
             long time = inputFile.lastModified() - firstTimestamp;
             if (!failureMap.containsKey(failure)) {
-                failureMap.put(failure, new FailureEntry(time, failure));
+                failureMap.put(failure, new FailureEntry(failure, time, failureMessage));
             }
             failureMap.get(failure).inducingInputs.add(inputFile);
         }
@@ -40,13 +40,15 @@ public final class FailureReport {
      */
     @SuppressWarnings({"unused", "FieldCanBeLocal", "MismatchedQueryAndUpdateOfCollection"})
     private static final class FailureEntry {
-        private final long time;
         private final Failure failure;
+        private final long firstTime;
+        private final String firstMessage;
         private final List<File> inducingInputs = new LinkedList<>();
 
-        private FailureEntry(long time, Failure failure) {
-            this.time = time;
+        private FailureEntry(Failure failure, long firstTime, String firstMessage) {
+            this.firstTime = firstTime;
             this.failure = failure;
+            this.firstMessage = firstMessage;
         }
     }
 }
