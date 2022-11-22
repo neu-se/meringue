@@ -56,11 +56,16 @@ final class CampaignAnalyzer implements Closeable {
         try {
             connection.send(inputFile);
             byte[] execData = connection.receive(byte[].class);
-            Failure failure = connection.receive(Boolean.class) ? connection.receive(Failure.class) : null;
+            Failure failure = null;
+            String failureMessage = null;
+            if (connection.receive(Boolean.class)) {
+                failure = connection.receive(Failure.class);
+                failureMessage = connection.receive(String.class);
+            }
             if (timer != null) {
                 timer.cancel();
             }
-            failureReport.record(inputFile, failure);
+            failureReport.record(inputFile, failure, failureMessage);
             coverageReport.record(inputFile, execData);
         } catch (Throwable t) {
             // Input caused fork to fail

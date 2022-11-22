@@ -10,10 +10,20 @@ public final class Failure implements Serializable {
     private final String type;
     private final List<StackTraceElement> trace;
 
-    public Failure(Throwable failure, StackTraceCleaner cleaner) {
-        this.type = failure.getClass().getName();
-        this.trace = Collections.unmodifiableList(Arrays.asList(cleaner.cleanStackTrace(failure)
-                                                                       .toArray(new StackTraceElement[0])));
+    public Failure(String type, StackTraceElement[] trace) {
+        if (type == null) {
+            throw new NullPointerException();
+        }
+        this.type = type;
+        this.trace = Collections.unmodifiableList(Arrays.asList(trace));
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public List<StackTraceElement> getTrace() {
+        return trace;
     }
 
     @Override

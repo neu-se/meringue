@@ -6,8 +6,8 @@ import java.util.function.Predicate;
 
 /**
  * Produces cleaned stack traces. A cleaned stack trace is created by first identifying the root cause of an exception
- * or error. Internal frames are removed from the stack trace for the root cause.
- * Finally, the root cause trace is trimmed to a specified maximum number of elements.
+ * or error. Internal frames are removed from the stack trace for the root cause. Finally, the root cause trace is
+ * trimmed to a specified maximum number of elements.
  */
 public class StackTraceCleaner {
     private final int maxSize;
@@ -29,9 +29,7 @@ public class StackTraceCleaner {
     }
 
     public List<StackTraceElement> cleanStackTrace(Throwable t) {
-        while (t.getCause() != null) {
-            t = t.getCause();
-        }
+        t = getRootCause(t);
         List<StackTraceElement> cleanedTrace = new LinkedList<>();
         for (StackTraceElement element : t.getStackTrace()) {
             if (cleanedTrace.size() == maxSize) {
@@ -42,5 +40,12 @@ public class StackTraceCleaner {
             }
         }
         return cleanedTrace;
+    }
+
+    public Throwable getRootCause(Throwable t) {
+        while (t.getCause() != null) {
+            t = t.getCause();
+        }
+        return t;
     }
 }
