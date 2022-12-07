@@ -19,15 +19,18 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class CoverageCalculator {
+    private static final int TAB_WIDTH = 4;
     final CoverageFilter filter;
     private final Map<Long, byte[]> idBufferMap = new HashMap<>();
     private final File temporaryDirectory;
@@ -40,6 +43,15 @@ public class CoverageCalculator {
         Analyzer analyzer = new RecordingAnalyzer(new ExecutionDataStore(), builder);
         for (File artifact : filter.getIncludedArtifacts()) {
             analyzer.analyzeAll(artifact);
+        }
+        if (filter.includeJavaClassLibrary()) {
+            File javaHome = filter.getJavaHome();
+            File jmods = new File(javaHome, "jmods");
+            if (jmods.isDirectory()) {
+                visitModularJavaClassLibrary(analyzer, javaHome);
+            } else {
+                analyzer.analyzeAll(javaHome);
+            }
         }
         for (IClassCoverage classCoverage : builder.getClasses()) {
             if (this.filter.filter(classCoverage.getName())) {
@@ -69,7 +81,14 @@ public class CoverageCalculator {
         return hitBranches;
     }
 
-    public void createReport(byte[] execData, String testDesc, IReportVisitor visitor) throws IOException {
+    public void createReport(byte[] execData, String testDescription, JacocoReportFormat format, File directory)
+            throws IOException {
+        createReport(execData == null ? new byte[0] : execData, testDescription, format.createVisitor(directory),
+                     format.shouldIncludeSources());
+    }
+
+    public void createReport(byte[] execData, String testDescription, IReportVisitor visitor,
+                             boolean includeSources) throws IOException {
         ExecFileLoader loader = new ExecFileLoader();
         loader.load(new ByteArrayInputStream(execData));
         CoverageBuilder builder = new CoverageBuilder();
@@ -78,23 +97,25 @@ public class CoverageCalculator {
             analyzer.analyzeClass(idBufferMap.get(key), "");
         }
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(builder.getBundle(testDesc), createLocator(filter.getIncludedArtifactSources()));
+        ISourceFileLocator locator = includeSources ? createLocator(filter.getIncludedArtifactSources()) :
+                new MultiSourceFileLocator(TAB_WIDTH);
+        visitor.visitBundle(builder.getBundle(testDescription), locator);
         visitor.visitEnd();
     }
 
     private ISourceFileLocator createLocator(Collection<File> sources) throws IOException {
         int i = 0;
-        MultiSourceFileLocator locator = new MultiSourceFileLocator(4);
+        MultiSourceFileLocator locator = new MultiSourceFileLocator(TAB_WIDTH);
         for (File source : sources) {
             String name = source.getName();
             if (isArchive(name)) {
                 File dest = new File(temporaryDirectory, name.substring(0, name.lastIndexOf(".")) + i++);
                 if (!dest.exists()) {
                     extractArchive(source, dest.toPath());
-                    locator.add(new DirectorySourceFileLocator(dest, "utf-8", 4));
                 }
+                locator.add(new DirectorySourceFileLocator(dest, "utf-8", TAB_WIDTH));
             } else {
-                locator.add(new DirectorySourceFileLocator(source, "utf-8", 4));
+                locator.add(new DirectorySourceFileLocator(source, "utf-8", TAB_WIDTH));
             }
         }
         return locator;
@@ -121,6 +142,27 @@ public class CoverageCalculator {
                 } else {
                     FileUtil.ensureDirectory(entryDest.getParent().toFile());
                     Files.copy(archive.getInputStream(entry), entryDest, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+    }
+
+    private static void visitModularJavaClassLibrary(Analyzer analyzer, File javaHome) throws IOException {
+        Path p = new File(javaHome, "lib" + File.separator + "jrt-fs.jar").toPath();
+        if (Files.exists(p)) {
+            try (URLClassLoader loader = new URLClassLoader(new URL[]{p.toUri().toURL()})) {
+                try (FileSystem fs = FileSystems.newFileSystem(URI.create("jrt:/"),
+                                                               Collections.emptyMap(),
+                                                               loader)) {
+                    Files.walkFileTree(fs.getPath("/modules"), new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                            try (InputStream stream = Files.newInputStream(file)) {
+                                analyzer.analyzeAll(stream, file.toString());
+                                return FileVisitResult.CONTINUE;
+                            }
+                        }
+                    });
                 }
             }
         }

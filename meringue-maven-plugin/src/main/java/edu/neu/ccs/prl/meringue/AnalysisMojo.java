@@ -21,14 +21,14 @@ public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues
     @Parameter(property = "meringue.includedArtifacts")
     List<String> includedArtifacts = new LinkedList<>();
     /**
-     * List of class files to include in JaCoCo reports. May use wildcard characters (* and ?). By default, all files
-     * are included.
+     * List of class files to include in coverage and JaCoCo reports. May use wildcard characters (* and ?). By default,
+     * all files are included.
      */
     @Parameter(property = "meringue.inclusions")
     private List<String> inclusions = new LinkedList<>();
     /**
-     * List of class files to exclude from JaCoCo reports. May use wildcard characters (* and ?). By default, no files
-     * are excluded.
+     * List of class files to exclude from coverage and JaCoCo reports. May use wildcard characters (* and ?). By
+     * default, no files are excluded.
      */
     @Parameter(property = "meringue.exclusions")
     private List<String> exclusions = new LinkedList<>();
@@ -61,6 +61,11 @@ public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues
      */
     @Parameter(property = "meringue.jacocoFormats", defaultValue = "HTML,CSV,XML")
     private List<JacocoReportFormat> jacocoFormats;
+    /**
+     * True if classes from the Java Class Library should be included in coverage and JaCoCo reports.
+     */
+    @Parameter(property = "meringue.includeJavaClassLibrary", defaultValue = "false")
+    private boolean includeJavaClassLibrary;
     @Component
     private ArtifactResolver artifactResolver;
     @Component
@@ -119,5 +124,10 @@ public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues
     @Override
     public ArtifactHandlerManager getArtifactHandlerManager() {
         return artifactHandlerManager;
+    }
+
+    @Override
+    public boolean includeJavaClassLibrary() {
+        return includeJavaClassLibrary;
     }
 }
