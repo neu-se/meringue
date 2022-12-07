@@ -1,6 +1,7 @@
 package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.MojoExecutionException;
 
 import java.util.*;
 
@@ -21,6 +22,10 @@ public final class ClassFilter {
         this.includedArtifacts =
                 includedArtifacts == null ? Collections.emptySet() :
                         Collections.unmodifiableSet(new HashSet<>(includedArtifacts));
+    }
+
+    public ClassFilter(AnalysisValues values) throws MojoExecutionException {
+        this(values.getInclusions(), values.getExclusions(), values.getIncludedArtifacts());
     }
 
     public String getExcludeString() {

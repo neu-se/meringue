@@ -23,14 +23,14 @@ public interface AnalysisValues extends CampaignValues {
     List<String> getIncludedArtifacts() throws MojoExecutionException;
 
     /**
-     * List of class files to include in JaCoCo reports. May use wildcard characters (* and ?). If empty, all files are
-     * included.
+     * List of class files to include in coverage and JaCoCo reports. May use wildcard characters (* and ?). If empty,
+     * all files are included.
      */
     List<String> getInclusions() throws MojoExecutionException;
 
     /**
-     * List of class files to exclude from JaCoCo reports. May use wildcard characters (* and ?). If empty, no files are
-     * excluded.
+     * List of class files to exclude from coverage and JaCoCo reports. May use wildcard characters (* and ?). If empty,
+     * no files are excluded.
      */
     List<String> getExclusions() throws MojoExecutionException;
 
@@ -77,12 +77,20 @@ public interface AnalysisValues extends CampaignValues {
 
     default CoverageCalculator createCoverageCalculator() throws MojoExecutionException {
         try {
-            return new CoverageFilter(getInclusions(), getExclusions(), getIncludedArtifacts(), getProject(),
-                                      createArtifactSourceResolver())
+            return new CoverageFilter(this)
                     .createCoverageCalculator(getTemporaryDirectory());
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create coverage calculator", e);
         }
+    }
+
+    /**
+     * True if classes from the Java Class Library should be included in coverage and JaCoCo reports.
+     *
+     * @return true if classes from the Java Class Library should be included in coverage and JaCoCo reports.
+     */
+    default boolean includeJavaClassLibrary() {
+        return false;
     }
 
     default void analyze() throws MojoExecutionException {

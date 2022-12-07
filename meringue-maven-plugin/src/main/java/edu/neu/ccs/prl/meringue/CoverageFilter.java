@@ -1,6 +1,7 @@
 package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.jacoco.agent.rt.internal_3570298.PreMain;
 import org.jacoco.core.runtime.WildcardMatcher;
@@ -16,15 +17,39 @@ public final class CoverageFilter {
     private final WildcardMatcher includes;
     private final WildcardMatcher excludes;
     private final ArtifactSourceResolver resolver;
+    private final File javaExecutable;
 
+    public CoverageFilter(AnalysisValues values) throws MojoExecutionException {
+        this(new ClassFilter(values), values.getProject(), values.createArtifactSourceResolver(),
+             values.includeJavaClassLibrary() ? values.getJavaExecutable() : null);
+    }
+
+    @Deprecated
     public CoverageFilter(Collection<String> inclusions, Collection<String> exclusions,
                           List<String> includedArtifacts, MavenProject project, ArtifactSourceResolver resolver) {
-        this.classFilter = new ClassFilter(inclusions, exclusions, includedArtifacts);
+        this(new ClassFilter(inclusions, exclusions, includedArtifacts), project, resolver, null);
+    }
+
+    public CoverageFilter(ClassFilter classFilter, MavenProject project, ArtifactSourceResolver resolver,
+                          File javaExecutable) {
+        if (classFilter == null || project == null || resolver == null) {
+            throw new NullPointerException();
+        }
+        this.classFilter = classFilter;
         this.project = project;
         this.resolver = resolver;
+        this.javaExecutable = javaExecutable;
         String includeString = classFilter.getIncludeString();
         this.includes = new WildcardMatcher(toVMName(includeString.isEmpty() ? "*" : includeString));
         this.excludes = new WildcardMatcher(toVMName(classFilter.getExcludeString()));
+    }
+
+    public boolean includeJavaClassLibrary() {
+        return javaExecutable != null;
+    }
+
+    public File getJavaHome() {
+        return FileUtil.javaExecToJavaHome(javaExecutable);
     }
 
     public ClassFilter getClassFilter() {

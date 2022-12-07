@@ -40,8 +40,7 @@ public final class CoverageReport {
     public void writeJacocoReports(String testDescription, File directory, Iterable<JacocoReportFormat> formats)
             throws IOException {
         for (JacocoReportFormat format : formats) {
-            calculator.createReport(lastExecData == null ? new byte[0] : lastExecData, testDescription,
-                                    format.createVisitor(directory));
+            calculator.createReport(lastExecData, testDescription, format, directory);
         }
     }
 
