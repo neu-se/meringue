@@ -12,10 +12,7 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValues {
     /**
@@ -63,6 +60,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
      */
     @Parameter(property = "meringue.duration", defaultValue = "P1D")
     private String duration;
+    /**
+     * Arbitrary Java command line options that should be used for test JVMs.
+     */
+    @Parameter(property = "meringue.argLine")
+    private String argLine;
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     private MavenSession session;
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
@@ -120,7 +122,13 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
 
     @Override
     public List<String> getJavaOptions() throws MojoExecutionException {
-        return javaOptions;
+        if (argLine == null || argLine.isEmpty()) {
+            return javaOptions;
+        } else {
+            List<String> options = new ArrayList<>(javaOptions);
+            options.addAll(Arrays.asList(argLine.trim().split("\\s+")));
+            return options;
+        }
     }
 
     @Override
