@@ -3,11 +3,8 @@ package edu.neu.ccs.prl.meringue.report;
 import edu.neu.ccs.prl.meringue.CampaignConfiguration;
 import edu.neu.ccs.prl.meringue.ClassFilter;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
 import java.time.Duration;
 
 /**
@@ -43,17 +40,6 @@ public class SummaryReport {
 
     public CampaignConfiguration getConfiguration() {
         return configuration;
-    }
-
-    public void writeLegacyReport(File file) throws IOException {
-        try (PrintStream out = new PrintStream(new BufferedOutputStream(Files.newOutputStream(file.toPath())))) {
-            out.printf("test_class_name: %s%n", configuration.getTestClassName());
-            out.printf("test_method_name: %s%n", configuration.getTestMethodName());
-            out.printf("duration_ms: %s%n", configuration.getDuration().toMillis());
-            out.printf("framework: %s%n", frameworkClassName);
-            out.printf("java_executable: %s%n", configuration.getJavaExecutable().getAbsolutePath());
-            out.printf("total_branches: %d%n", totalBranches);
-        }
     }
 
     public void write(File file) throws IOException {

@@ -112,9 +112,6 @@ public class AnalysisRunner {
         File file = new File(values.getOutputDirectory(), "summary.json");
         values.getLog().info("Writing summary report to: " + file);
         report.write(file);
-        File legacyFile = new File(values.getOutputDirectory(), "config.txt");
-        values.getLog().info("Writing legacy summary report to: " + legacyFile);
-        report.writeLegacyReport(legacyFile);
     }
 
     private static File[] collectInputFiles(FuzzFramework framework) throws IOException {
