@@ -109,7 +109,7 @@ public interface AnalysisValues extends CampaignValues {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
         options.add("-cp");
-        options.add(CampaignUtil.buildClassPath(createAnalysisJar(framework), configuration.getTestClasspathJar()));
+        options.add(CampaignUtil.buildClassPath(configuration.getTestClasspathJar(), createAnalysisJar(framework)));
         options.add(jacocoOption);
         options.addAll(framework.getAnalysisJavaOptions());
         String[] arguments = new String[]{
