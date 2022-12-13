@@ -25,10 +25,11 @@ public class SummaryReport {
     private final long totalBranches;
     private final long numberOfCoveredBranches;
     private final int numberOfUniqueFailures;
+    private final int totalSavedInputs;
 
     public SummaryReport(CampaignConfiguration configuration, String frameworkClassName, ClassFilter coverageFilter,
                          int maxTraceSize, Duration replayTimeout, long totalBranches, long numberOfCoveredBranches,
-                         int numberOfUniqueFailures) {
+                         int numberOfUniqueFailures, int totalSavedInputs) {
         this.configuration = configuration;
         this.frameworkClassName = frameworkClassName;
         this.coverageFilter = coverageFilter;
@@ -37,6 +38,7 @@ public class SummaryReport {
         this.totalBranches = totalBranches;
         this.numberOfCoveredBranches = numberOfCoveredBranches;
         this.numberOfUniqueFailures = numberOfUniqueFailures;
+        this.totalSavedInputs = totalSavedInputs;
     }
 
     public CampaignConfiguration getConfiguration() {

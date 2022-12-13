@@ -54,7 +54,8 @@ public class AnalysisRunner {
                 Duration.ofSeconds(values.getTimeout()),
                 coverageReport.getTotalBranches(),
                 coverageReport.getCoveredBranches(),
-                failureReport.getNumberOfUniqueFailures()
+                failureReport.getNumberOfUniqueFailures(),
+                inputFiles.length
         );
         logResults(summaryReport);
         writeSummaryReport(summaryReport);
