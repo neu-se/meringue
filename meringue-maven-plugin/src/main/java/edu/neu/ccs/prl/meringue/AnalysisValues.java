@@ -109,7 +109,11 @@ public interface AnalysisValues extends CampaignValues {
             options.add(JvmLauncher.DEBUG_OPT + "5005");
         }
         options.add("-cp");
-        options.add(CampaignUtil.buildClassPath(configuration.getTestClasspathJar(), createAnalysisJar(framework)));
+        options.add(CampaignUtil.buildClassPath(
+                createAnalysisJar(),
+                configuration.getTestClasspathJar(),
+                createAnalysisFrameworkJar(framework)
+        ));
         options.add(jacocoOption);
         options.addAll(framework.getAnalysisJavaOptions());
         String[] arguments = new String[]{
@@ -129,17 +133,26 @@ public interface AnalysisValues extends CampaignValues {
         );
     }
 
-    default File createAnalysisJar(FuzzFramework framework) throws MojoExecutionException {
+    default File createAnalysisJar() throws MojoExecutionException {
         try {
             File jar = new File(getTemporaryDirectory(), "meringue-analysis.jar");
             Collection<File> elements = Stream.of(AnalysisForkMain.class, PreMain.class, Analyzer.class)
                                               .map(FileUtil::getClassPathElement)
                                               .collect(Collectors.toCollection(HashSet::new));
-            elements.addAll(framework.getRequiredClassPathElements());
             FileUtil.buildManifestJar(elements, jar);
             return jar;
         } catch (IOException e) {
             throw new MojoExecutionException("Failed to create analysis manifest JAR", e);
+        }
+    }
+
+    default File createAnalysisFrameworkJar(FuzzFramework framework) throws MojoExecutionException {
+        try {
+            File jar = new File(getTemporaryDirectory(), "meringue-analysis-framework.jar");
+            FileUtil.buildManifestJar(framework.getRequiredClassPathElements(), jar);
+            return jar;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to create framework manifest JAR", e);
         }
     }
 }
