@@ -76,8 +76,10 @@ public final class ProcessUtil {
 
     public static void stop(Process process) throws InterruptedException {
         if (process.isAlive()) {
-            process.destroyForcibly();
-            process.waitFor();
+            process.destroy();
+            if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                process.destroyForcibly().waitFor();
+            }
         }
     }
 }
