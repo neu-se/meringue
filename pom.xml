@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.neu.ccs.prl.meringue</groupId>
     <artifactId>meringue</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>Meringue</name>
     <description>Meringue aggregator POM</description>
@@ -46,17 +46,17 @@
             <dependency>
                 <groupId>edu.neu.ccs.prl.meringue</groupId>
                 <artifactId>meringue-core</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
+                <version>1.0.0</version>
             </dependency>
             <dependency>
                 <groupId>edu.neu.ccs.prl.meringue</groupId>
                 <artifactId>meringue-zest-extension</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
+                <version>1.0.0</version>
             </dependency>
             <dependency>
                 <groupId>edu.neu.ccs.prl.meringue</groupId>
                 <artifactId>meringue-jazzer-extension</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
+                <version>1.0.0</version>
             </dependency>
             <!-- junit-->
             <dependency>
@@ -112,7 +112,7 @@
                 <plugin>
                     <groupId>edu.neu.ccs.prl.meringue</groupId>
                     <artifactId>meringue-maven-plugin</artifactId>
-                    <version>1.0.0-SNAPSHOT</version>
+                    <version>1.0.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

@@ -25,7 +25,7 @@ To add Meringue to your build add the meringue-maven-plugin in your pom:
            <plugin>
               <groupId>edu.neu.ccs.prl.meringue</groupId>
               <artifactId>meringue-maven-plugin</artifactId>
-              <version>1.0.0-SNAPSHOT</version>
+              <version>1.0.0</version>
            </plugin>
            ...
        </plugins>
