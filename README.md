@@ -25,7 +25,7 @@ To add Meringue to your build add the meringue-maven-plugin in your pom:
            <plugin>
               <groupId>edu.neu.ccs.prl.meringue</groupId>
               <artifactId>meringue-maven-plugin</artifactId>
-              <version>1.0.0</version>
+              <version>1.1.0-SNAPSHOT</version>
            </plugin>
            ...
        </plugins>
@@ -114,7 +114,7 @@ JaCoCo coverage report and a report listing observed failures.
 
 This software release is licensed under the BSD 3-Clause License.
 
-Copyright (c) 2022, Katherine Hough and Jonathan Bell.
+Copyright (c) 2023, Katherine Hough and Jonathan Bell.
 
 All rights reserved.
 
