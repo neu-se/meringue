@@ -1,6 +1,5 @@
 package edu.neu.ccs.prl.meringue;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
@@ -68,8 +67,6 @@ public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues
     private boolean includeJavaClassLibrary;
     @Component
     private ArtifactResolver artifactResolver;
-    @Component
-    private ArtifactHandlerManager artifactHandlerManager;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -119,11 +116,6 @@ public class AnalysisMojo extends AbstractMeringueMojo implements AnalysisValues
     @Override
     public ArtifactResolver getArtifactResolver() {
         return artifactResolver;
-    }
-
-    @Override
-    public ArtifactHandlerManager getArtifactHandlerManager() {
-        return artifactHandlerManager;
     }
 
     @Override

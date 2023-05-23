@@ -1,6 +1,7 @@
 package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ResolutionErrorHandler;
 import org.apache.maven.execution.MavenSession;
@@ -79,6 +80,8 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     private ResolutionErrorHandler errorHandler;
     @Component
     private RepositorySystem repositorySystem;
+    @Component
+    private ArtifactHandlerManager artifactHandlerManager;
 
     @Override
     public MavenSession getSession() throws MojoExecutionException {
@@ -169,5 +172,10 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     @Override
     public File getWorkingDirectory() throws MojoExecutionException {
         return null;
+    }
+
+    @Override
+    public ArtifactHandlerManager getArtifactHandlerManager() {
+        return artifactHandlerManager;
     }
 }

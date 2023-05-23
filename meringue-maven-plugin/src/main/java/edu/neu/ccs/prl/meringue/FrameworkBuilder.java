@@ -44,12 +44,14 @@ public class FrameworkBuilder {
         validate();
         try {
             FuzzFramework framework = (FuzzFramework) Class.forName(frameworkClassName)
-                                                           .getDeclaredConstructor()
-                                                           .newInstance();
+                    .getDeclaredConstructor()
+                    .newInstance();
             if (framework instanceof JarFuzzFramework) {
                 JarFuzzFramework jFramework = (JarFuzzFramework) framework;
                 jFramework.setFrameworkJar(buildFrameworkJar(jFramework.getCoordinate()));
             }
+            framework.setResolver(resolver);
+            framework.setTemporaryDirectory(temporaryDirectory);
             framework.initialize(configuration, frameworkArguments);
             return framework;
         } catch (ClassCastException | ReflectiveOperationException | IOException e) {

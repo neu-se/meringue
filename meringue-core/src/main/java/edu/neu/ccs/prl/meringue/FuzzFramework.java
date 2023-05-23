@@ -38,4 +38,10 @@ public interface FuzzFramework {
     default List<String> getAnalysisJavaOptions() {
         return Collections.emptyList();
     }
+
+    default void setResolver(ArtifactResolver resolver) {
+    }
+
+    default void setTemporaryDirectory(File temporaryDirectory) {
+    }
 }

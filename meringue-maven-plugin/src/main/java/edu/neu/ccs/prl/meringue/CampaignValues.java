@@ -2,6 +2,7 @@ package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ResolutionErrorHandler;
 import org.apache.maven.execution.MavenSession;
@@ -126,10 +127,13 @@ public interface CampaignValues {
      */
     File getWorkingDirectory() throws MojoExecutionException;
 
+    /**
+     * Artifact handler manager for this Maven session.
+     */
+    ArtifactHandlerManager getArtifactHandlerManager() throws MojoExecutionException;
+
     default DependencyResolver createDependencyResolver() throws MojoExecutionException {
-        return new DependencyResolver(getRepositorySystem(), getLocalRepository(),
-                                      getProject().getPluginArtifactRepositories(), getErrorHandler(),
-                                      getSession().isOffline());
+        return new DependencyResolver(this);
     }
 
     default FrameworkBuilder createFrameworkBuilder() throws MojoExecutionException {

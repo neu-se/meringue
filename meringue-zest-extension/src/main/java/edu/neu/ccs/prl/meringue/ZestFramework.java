@@ -1,48 +1,59 @@
 package edu.neu.ccs.prl.meringue;
 
-import janala.instrument.SnoopInstructionTransformer;
-import org.objectweb.asm.ClassVisitor;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
-public class ZestFramework implements JarFuzzFramework {
+public class ZestFramework implements FuzzFramework {
+    private static final String JQF_GROUP_ID = "edu.berkeley.cs.jqf";
     private JvmLauncher launcher;
-    private File frameworkJar;
     private File corpusDirectory;
     private File failuresDirectory;
+    private File frameworkJar;
+    private ArtifactResolver resolver;
+    private File temporaryDirectory;
+
+    @Override
+    public void setResolver(ArtifactResolver resolver) {
+        this.resolver = resolver;
+    }
+
+    @Override
+    public void setTemporaryDirectory(File temporaryDirectory) {
+        this.temporaryDirectory = temporaryDirectory;
+    }
 
     @Override
     public void initialize(CampaignConfiguration configuration, Properties frameworkArguments) throws IOException {
-        File outputDirectory = configuration.getOutputDirectory();
-        FileUtil.ensureDirectory(outputDirectory);
-        corpusDirectory = new File(outputDirectory, "corpus");
-        failuresDirectory = new File(outputDirectory, "failures");
+        corpusDirectory = new File(configuration.getOutputDirectory(), "corpus");
+        failuresDirectory = new File(configuration.getOutputDirectory(), "failures");
+        frameworkJar = buildFrameworkJar();
+        List<File> bootClasspathElements = resolver.resolve(JQF_GROUP_ID, "jqf-instrument", getJqfVersion(),
+                "jar", null, true);
+        File agentJar = resolver.resolve(JQF_GROUP_ID, "jqf-instrument", getJqfVersion(), "jar", null, false)
+                .iterator()
+                .next();
         List<String> javaOptions = new ArrayList<>(configuration.getJavaOptions());
-        File instrumentJar = FileUtil.getClassPathElement(SnoopInstructionTransformer.class);
-        File asmJar = FileUtil.getClassPathElement(ClassVisitor.class);
-        javaOptions.add(
-                String.format("-Xbootclasspath/a:%s:%s", instrumentJar.getAbsolutePath(), asmJar.getAbsolutePath()));
-        javaOptions.add("-javaagent:" + instrumentJar.getAbsolutePath());
+        javaOptions.add("-Xbootclasspath/a:" + resolver.buildClassPath(bootClasspathElements));
+        javaOptions.add("-javaagent:" + agentJar.getAbsolutePath());
         javaOptions.add("-cp");
-        String classPath = configuration.getTestClasspathJar().getAbsolutePath() + File.pathSeparator +
-                frameworkJar.getAbsolutePath();
-        javaOptions.add(classPath);
+        javaOptions.add(resolver.buildClassPath(Arrays.asList(configuration.getTestClasspathJar(), frameworkJar)));
         if (!hasJanalaConfiguration(javaOptions)) {
-            File janalaFile = new File(outputDirectory, "janala.conf");
+            File janalaFile = new File(temporaryDirectory, "janala.conf");
             writeJanalaConfiguration(janalaFile);
             javaOptions.add("-Djanala.conf=" + janalaFile.getAbsolutePath());
         }
-        String[] arguments =
-                new String[]{configuration.getTestClassName(), configuration.getTestMethodName(),
-                        outputDirectory.getAbsolutePath()};
-        launcher = JvmLauncher.fromMain(configuration.getJavaExecutable(), getMainClassName(),
-                                        javaOptions.toArray(new String[0]), true, arguments,
-                                        configuration.getWorkingDirectory(),
-                                        configuration.getEnvironment());
+        launcher = JvmLauncher.fromMain(
+                configuration.getJavaExecutable(),
+                getMainClassName(),
+                javaOptions.toArray(new String[0]),
+                true,
+                getArguments(configuration, frameworkArguments),
+                configuration.getWorkingDirectory(),
+                configuration.getEnvironment()
+        );
     }
 
     @Override
@@ -72,34 +83,36 @@ public class ZestFramework implements JarFuzzFramework {
         return Collections.singleton(frameworkJar);
     }
 
-    @Override
-    public boolean canRestartCampaign() {
-        return false;
+    protected File buildFrameworkJar() throws IOException {
+        File result = new File(temporaryDirectory, "jqf-framework.jar");
+        List<File> classpathElements =
+                new ArrayList<>(resolver.resolve(JQF_GROUP_ID, "jqf-fuzz", getJqfVersion(), "jar", null, true));
+        classpathElements.add(FileUtil.getClassPathElement(getReplayerClass()));
+        classpathElements.add(FileUtil.getClassPathElement(SystemPropertyUtil.class));
+        FileUtil.buildManifestJar(classpathElements, result);
+        return result;
     }
 
-    @Override
-    public Process restartCampaign() {
-        throw new UnsupportedOperationException();
+    protected String getJqfVersion() {
+        return "2.0";
     }
 
-    public String getMainClassName() {
+    protected String[] getArguments(CampaignConfiguration configuration, Properties frameworkArguments) {
+        return new String[]{
+                configuration.getTestClassName(),
+                configuration.getTestMethodName(),
+                configuration.getOutputDirectory().getAbsolutePath()
+        };
+    }
+
+    protected String getMainClassName() {
         return ZestForkMain.class.getName();
     }
 
-    @Override
-    public String getCoordinate() {
-        return "edu.neu.ccs.prl.meringue:meringue-zest-extension";
-    }
-
-    @Override
-    public void setFrameworkJar(File frameworkJar) {
-        this.frameworkJar = frameworkJar;
-    }
-
-    private File[] getInputFiles(File corpusDirectory) {
-        return Arrays.stream(Objects.requireNonNull(corpusDirectory.listFiles()))
-                     .filter(f -> f.getName().startsWith("id_"))
-                     .toArray(File[]::new);
+    protected File[] getInputFiles(File directory) {
+        return Arrays.stream(Objects.requireNonNull(directory.listFiles()))
+                .filter(f -> f.getName().startsWith("id_"))
+                .toArray(File[]::new);
     }
 
     private static boolean hasJanalaConfiguration(List<String> javaOptions) {
@@ -114,16 +127,16 @@ public class ZestFramework implements JarFuzzFramework {
     private static void writeJanalaConfiguration(File file) throws FileNotFoundException {
         try (PrintWriter out = new PrintWriter(file)) {
             out.println("janala.excludes=" + String.join(",",
-                                                         "java/",
-                                                         "com/sun/proxy/",
-                                                         "edu/berkeley/cs/jqf/",
-                                                         "edu/neu/ccs/prl/meringue/ZestForkMain",
-                                                         "org/junit/"));
+                    "java/",
+                    "com/sun/proxy/",
+                    "edu/berkeley/cs/jqf/",
+                    "edu/neu/ccs/prl/meringue/ZestForkMain",
+                    "org/junit/"));
             out.println("janala.includes=" + String.join(",",
-                                                         "edu/berkeley/cs/jqf/examples",
-                                                         "java/text",
-                                                         "java/time",
-                                                         "com/sun/imageio"));
+                    "edu/berkeley/cs/jqf/examples",
+                    "java/text",
+                    "java/time",
+                    "com/sun/imageio"));
         }
     }
 }

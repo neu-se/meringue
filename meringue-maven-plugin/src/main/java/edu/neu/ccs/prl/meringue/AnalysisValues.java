@@ -1,6 +1,5 @@
 package edu.neu.ccs.prl.meringue;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
 import org.jacoco.agent.rt.internal_3570298.PreMain;
@@ -65,11 +64,6 @@ public interface AnalysisValues extends CampaignValues {
      * Artifact resolver for this Maven session.
      */
     ArtifactResolver getArtifactResolver() throws MojoExecutionException;
-
-    /**
-     * Artifact handler manager for this Maven session.
-     */
-    ArtifactHandlerManager getArtifactHandlerManager() throws MojoExecutionException;
 
     default ArtifactSourceResolver createArtifactSourceResolver() throws MojoExecutionException {
         return new ArtifactSourceResolver(getLog(), getSession(), getArtifactResolver(), getArtifactHandlerManager());
