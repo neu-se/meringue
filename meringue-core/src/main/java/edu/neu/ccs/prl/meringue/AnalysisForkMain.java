@@ -14,7 +14,7 @@ public final class AnalysisForkMain {
         int port = Integer.parseInt(args[4]);
         Replayer replayer = (Replayer) Class.forName(replayerClassName).getDeclaredConstructor().newInstance();
         replayer.configure(testClassName, testMethodName, AnalysisForkMain.class.getClassLoader());
-        try (ReplayerManager manager = new ReplayerManager(port, maxTraceSize)) {
+        try (ReplayerManager manager = new AnalysisReplayerManager(port, maxTraceSize)) {
             replayer.accept(manager);
         }
     }
