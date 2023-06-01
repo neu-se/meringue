@@ -23,6 +23,9 @@ public class SimpleReplayManager implements ReplayerManager {
 
     @Override
     public void handleResult(Throwable failure) {
+        if (failure != null) {
+            failure.printStackTrace();
+        }
     }
 
     @Override
