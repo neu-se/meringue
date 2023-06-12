@@ -9,6 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>meringue-core</artifactId>
+    <name>meringue-core</name>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>

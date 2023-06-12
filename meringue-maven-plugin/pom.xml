@@ -8,8 +8,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>meringue-maven-plugin</artifactId>
-    <name>Meringue Maven Plugin</name>
-    <description>Meringue Maven plugins</description>
+    <name>Meringue-maven-plugin</name>
     <packaging>maven-plugin</packaging>
     <dependencies>
         <dependency>
