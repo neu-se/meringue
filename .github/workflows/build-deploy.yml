@@ -6,7 +6,7 @@ jobs:
   build-test:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build and install with maven
         run: mvn install
   deploy:
@@ -14,7 +14,7 @@ jobs:
     needs: build-test
     if: github.ref == 'refs/heads/main' # only run deploy on main branch
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: deploy
         env: 
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
