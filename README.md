@@ -16,7 +16,7 @@ Meringue is a Maven plugin for running and analyzing fuzzing campaigns.
 4. In the root directory for this project, run `mvn -DskipTests install`.
 
 ## Adding Meringue to Your Build
-To add Meringue to your build add the meringue-maven-plugin in your pom:
+To add Meringue to your build, add the meringue-maven-plugin in your pom:
    ```
    <build>
        ...
@@ -25,7 +25,7 @@ To add Meringue to your build add the meringue-maven-plugin in your pom:
            <plugin>
               <groupId>edu.neu.ccs.prl.meringue</groupId>
               <artifactId>meringue-maven-plugin</artifactId>
-              <version>1.1.0-SNAPSHOT</version>
+              <version>(version)</version>
            </plugin>
            ...
        </plugins>

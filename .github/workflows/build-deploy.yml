@@ -1,18 +1,16 @@
 name: CI Build
-on: push
+on: [ push, pull_request ]
+env:
+  JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
 jobs:
   build-test:
     runs-on: self-hosted
-    env:
-      JAVA_HOME: /usr/lib/jvm/jdk1.8.0_301/
     steps:
       - uses: actions/checkout@v2
       - name: Build and install with maven
         run: mvn install
   deploy:
     runs-on: self-hosted
-    env:
-      JAVA_HOME: /usr/lib/jvm/jdk1.8.0_301/
     needs: build-test
     if: github.ref == 'refs/heads/main' # only run deploy on main branch
     steps:
