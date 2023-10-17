@@ -131,7 +131,7 @@ public final class JazzerFramework implements FuzzFramework {
         } else {
             throw new IllegalStateException("Operating system not supported");
         }
-        String[] resourceNames = new String[]{"jazzer_agent_deploy.jar", "jazzer_api_deploy.jar", executableName};
+        String[] resourceNames = new String[]{"jazzer_standalone.jar", executableName};
         File bin = new File(outputDir, "bin");
         FileUtil.ensureDirectory(bin);
         File jazzerExec = new File(bin, executableName);

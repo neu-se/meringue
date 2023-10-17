@@ -12,12 +12,12 @@
     <name>meringue-jazzer-extension</name>
     <packaging>jar</packaging>
     <properties>
-        <jazzer.version>0.11.0</jazzer.version>
+        <jazzer.version>0.21.1</jazzer.version>
         <jazzer.linux.url>
-            https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v${jazzer.version}/jazzer-linux-${jazzer.version}.tar.gz
+            https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v${jazzer.version}/jazzer-linux.tar.gz
         </jazzer.linux.url>
         <jazzer.mac.url>
-            https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v${jazzer.version}/jazzer-macos-${jazzer.version}.tar.gz
+            https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v${jazzer.version}/jazzer-macos.tar.gz
         </jazzer.mac.url>
     </properties>
     <dependencies>
