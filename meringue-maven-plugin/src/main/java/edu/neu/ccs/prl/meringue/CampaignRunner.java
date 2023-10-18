@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 public class CampaignRunner {
     private final CampaignValues values;
     private Process process = null;
+    private boolean shutdown = false;
 
     public CampaignRunner(CampaignValues values) {
         if (values == null) {
@@ -34,27 +35,32 @@ public class CampaignRunner {
     private void run(FuzzFramework framework, Duration duration)
             throws InterruptedException, IOException, MojoExecutionException {
         long endTime = System.currentTimeMillis() + duration.toMillis();
-        if (ProcessUtil.waitFor(setProcess(framework.startCampaign()), duration.toMillis(),
-                                TimeUnit.MILLISECONDS)) {
-            if (!framework.canRestartCampaign()) {
-                throw new MojoExecutionException("Campaign process terminated unexpectedly");
-            }
-            while (endTime > System.currentTimeMillis()) {
-                long remaining = endTime - System.currentTimeMillis();
-                if (!ProcessUtil.waitFor(setProcess(framework.restartCampaign()), remaining,
-                                         TimeUnit.MILLISECONDS)) {
-                    return;
-                }
+        while (endTime > System.currentTimeMillis()) {
+            long remaining = endTime - System.currentTimeMillis();
+            if (forkAndWait(framework, remaining)) {
+                return;
             }
         }
     }
 
-    private synchronized Process setProcess(Process process) {
-        this.process = process;
-        return this.process;
+    private boolean forkAndWait(FuzzFramework framework, long timeout)
+            throws IOException, MojoExecutionException, InterruptedException {
+        synchronized (this) {
+            if (shutdown) {
+                return true;
+            } else if (process == null) {
+                process = framework.startCampaign();
+            } else if (!framework.canRestartCampaign()) {
+                throw new MojoExecutionException("Campaign process terminated unexpectedly");
+            } else {
+                process = framework.restartCampaign();
+            }
+        }
+        return ProcessUtil.waitFor(process, timeout, TimeUnit.MILLISECONDS);
     }
 
     private synchronized void shutdown() {
+        shutdown = true;
         if (process != null) {
             try {
                 ProcessUtil.stop(process);
