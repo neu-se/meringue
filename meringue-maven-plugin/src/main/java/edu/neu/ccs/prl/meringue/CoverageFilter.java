@@ -110,6 +110,9 @@ public final class CoverageFilter {
         if (!includeString.isEmpty()) {
             opt += ",includes=" + includeString;
         }
+        if (javaExecutable != null) {
+            opt += ",inclbootstrapclasses=true";
+        }
         return opt;
     }
 
