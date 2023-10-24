@@ -110,7 +110,7 @@ public final class JazzerFramework implements FuzzFramework {
         }
         String argLine = frameworkArguments.getProperty("argLine");
         if (argLine != null && !argLine.isEmpty()) {
-            for (String s : argLine.split("\\s")) {
+            for (String s : argLine.split("\\s+")) {
                 if (!s.isEmpty()) {
                     command.add(s);
                 }
