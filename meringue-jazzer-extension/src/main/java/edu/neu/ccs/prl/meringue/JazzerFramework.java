@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class JazzerFramework implements FuzzFramework {
     private File outputDir;
@@ -117,7 +118,7 @@ public final class JazzerFramework implements FuzzFramework {
         command.add("--keep_going=" + Integer.MAX_VALUE);
         command.add("--reproducer_path=" + reproducerDir.getAbsolutePath());
         if (!config.getJavaOptions().isEmpty()) {
-            command.add("--jvm_args=" + String.join(File.pathSeparator, config.getJavaOptions()));
+            command.add("--jvm_args=" + String.join(File.pathSeparator, escapeJavaOptions(config.getJavaOptions())));
         }
         String argLine = frameworkArguments.getProperty("argLine");
         if (argLine != null && !argLine.isEmpty()) {
@@ -130,6 +131,12 @@ public final class JazzerFramework implements FuzzFramework {
         command.add("-rss_limit_mb=0");
         command.add(corpusDir.getAbsolutePath());
         return command;
+    }
+
+    private static List<String> escapeJavaOptions(List<String> javaOptions) {
+        return javaOptions.stream()
+                .map(s -> s.replace(":", "\\:"))
+                .collect(Collectors.toList());
     }
 
     private static File getJazzerResource(File outputDir, String resourceName) throws IOException {
