@@ -7,7 +7,7 @@ import java.io.IOException;
 public interface ReplayerManager extends Closeable {
     File nextInput() throws IOException;
 
-    boolean hasNextInput();
+    boolean hasNextInput() throws IOException;
 
     void handleResult(Throwable failure) throws IOException;
 }

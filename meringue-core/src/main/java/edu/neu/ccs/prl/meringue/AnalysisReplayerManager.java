@@ -9,6 +9,7 @@ import java.io.IOException;
 public final class AnalysisReplayerManager implements Closeable, ReplayerManager {
     private final ForkConnection connection;
     private final StackTraceCleaner cleaner;
+    private File nextInput = null;
 
     public AnalysisReplayerManager(int port, int maxTraceSize) throws IOException {
         this.connection = new ForkConnection(port);
@@ -16,21 +17,29 @@ public final class AnalysisReplayerManager implements Closeable, ReplayerManager
     }
 
     @Override
-    public File nextInput() throws IOException {
-        File input;
-        try {
-            input = connection.receive(File.class);
-        } catch (ClassNotFoundException e) {
-            throw new AssertionError(e);
+    public File nextInput() {
+        if (!hasNextInput()) {
+            throw new IllegalStateException();
         }
         // Reset the JaCoCo coverage
         RT.getAgent().reset();
-        return input;
+        File temp = nextInput;
+        nextInput = null;
+        return temp;
     }
 
     @Override
     public boolean hasNextInput() {
-        return !connection.isClosed();
+        if (nextInput == null) {
+            try {
+                nextInput = connection.receive(File.class);
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            } catch (IOException e) {
+                return false;
+            }
+        }
+        return nextInput != null;
     }
 
     @Override

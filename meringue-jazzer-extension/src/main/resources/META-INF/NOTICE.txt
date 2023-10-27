@@ -1,6 +1,6 @@
 ==============================================================
 Jazzer
-This software release contains components from Jazzer (versions 0.21.1 and 0.10.0).
+This software release contains components from Jazzer (version 0.21.1)).
 Jazzer is available at: https://github.com/CodeIntelligenceTesting/jazzer.
 
 Jazzer is licensed under the following terms:

@@ -101,9 +101,8 @@ final class CampaignAnalyzer implements Closeable {
             connection = null;
         }
         if (process != null && process.isAlive()) {
-            process.destroyForcibly();
             try {
-                process.waitFor();
+                ProcessUtil.stop(process);
             } catch (InterruptedException e) {
                 //
             }

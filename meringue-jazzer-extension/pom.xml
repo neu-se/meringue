@@ -27,8 +27,8 @@
         </dependency>
         <dependency>
             <groupId>com.code-intelligence</groupId>
-            <artifactId>jazzer-replayer</artifactId>
-            <version>0.10.0</version>
+            <artifactId>jazzer</artifactId>
+            <version>${jazzer.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.surefire</groupId>

@@ -1,21 +1,27 @@
 package edu.neu.ccs.prl.meringue;
 
-import com.code_intelligence.jazzer.replay.Replayer;
+import com.code_intelligence.jazzer.driver.Opt;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
 
 public final class JazzerReplayer implements edu.neu.ccs.prl.meringue.Replayer {
+    private FuzzTargetRunner runner;
+
     @Override
-    public void configure(String testClassName, String testMethodName, ClassLoader classLoader) {
-        JazzerTargetWrapper.fuzzerInitialize(new String[]{testClassName, testMethodName});
-        JazzerTargetWrapper.setRethrow(false);
+    public void configure(String testClassName, String testMethodName, ClassLoader classLoader) throws Throwable {
+        if ("fuzzerTestOneInput".equals(testMethodName)) {
+            runner = new FuzzTargetRunner(testClassName);
+        } else {
+            Opt.targetArgs.setIfDefault(Arrays.asList(testClassName, testMethodName));
+            runner = new FuzzTargetRunner(JazzerTargetWrapper.class.getName());
+        }
     }
 
     private Throwable execute(File input) throws IOException {
-        Replayer.executeFuzzTarget(JazzerTargetWrapper.class, Files.readAllBytes(input.toPath()));
-        return JazzerTargetWrapper.getLastThrown();
+        return runner.run(Files.readAllBytes(input.toPath()));
     }
 
     @Override

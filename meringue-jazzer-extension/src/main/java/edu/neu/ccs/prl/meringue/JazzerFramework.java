@@ -15,6 +15,8 @@ public final class JazzerFramework implements FuzzFramework {
     private File reproducerDir;
     private File workingDir;
     private File logFile;
+    private File jazzerExecutable;
+    private File jazzerBootstrapJar;
     private boolean quiet = false;
     private ProcessBuilder builder;
 
@@ -26,13 +28,23 @@ public final class JazzerFramework implements FuzzFramework {
         workingDir = new File(outputDir, "out");
         logFile = new File(outputDir, "jazzer.log");
         quiet = Boolean.parseBoolean(frameworkArguments.getProperty("quiet", "false"));
-        List<String> command = createCommand(config, frameworkArguments, outputDir, reproducerDir, corpusDir);
+        File jazzerExec = getJazzerResource(outputDir, "jazzer");
+        if (!jazzerExec.setExecutable(true)) {
+            throw new IllegalStateException("Failed to assign executable permissions to Jazzer executable");
+        }
+        jazzerExecutable = jazzerExec;
+        getJazzerResource(outputDir, "jazzer_standalone.jar");
+        String resourcePath = File.separator + String.join(File.separator, "com", "code_intelligence",
+                "jazzer", "runtime", "jazzer_bootstrap.jar");
+        jazzerBootstrapJar = getJazzerResource(outputDir, resourcePath, "jazzer_bootstrap.jar");
+        List<String> command = createCommand(config, frameworkArguments);
         builder = new ProcessBuilder().command(command).directory(workingDir);
         if (config.getEnvironment() != null) {
             builder.environment().clear();
             builder.environment().putAll(config.getEnvironment());
         }
-        builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExecutable()).getAbsolutePath());
+        builder.environment().put("JAVA_HOME", FileUtil.javaExecToJavaHome(config.getJavaExecutable())
+                .getAbsolutePath());
     }
 
     @Override
@@ -46,7 +58,7 @@ public final class JazzerFramework implements FuzzFramework {
             return ProcessUtil.start(builder, true);
         } else {
             return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
-                          .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
+                    .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
@@ -58,7 +70,7 @@ public final class JazzerFramework implements FuzzFramework {
     @Override
     public File[] getFailureFiles() {
         return Arrays.stream(Objects.requireNonNull(workingDir.listFiles()))
-                     .filter(f -> f.getName().startsWith("crash-")).toArray(File[]::new);
+                .filter(f -> f.getName().startsWith("crash-")).toArray(File[]::new);
     }
 
     @Override
@@ -68,7 +80,7 @@ public final class JazzerFramework implements FuzzFramework {
 
     @Override
     public Collection<File> getRequiredClassPathElements() {
-        return Collections.singleton(FileUtil.getClassPathElement(JazzerFramework.class));
+        return Arrays.asList(FileUtil.getClassPathElement(JazzerFramework.class), jazzerBootstrapJar);
     }
 
     @Override
@@ -86,14 +98,13 @@ public final class JazzerFramework implements FuzzFramework {
             return ProcessUtil.start(builder, true);
         } else {
             return builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
-                          .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
+                    .redirectError(ProcessBuilder.Redirect.appendTo(logFile)).start();
         }
     }
 
-    private static List<String> createCommand(CampaignConfiguration config, Properties frameworkArguments,
-                                              File outputDir, File reproducerDir, File corpusDir) throws IOException {
+    private List<String> createCommand(CampaignConfiguration config, Properties frameworkArguments) {
         List<String> command = new LinkedList<>();
-        command.add(getJazzerExecutable(outputDir).getAbsolutePath());
+        command.add(jazzerExecutable.getAbsolutePath());
         String classPath = config.getTestClasspathJar().getAbsolutePath() + File.pathSeparator +
                 FileUtil.getClassPathElement(JazzerFramework.class).getAbsolutePath();
         command.add("--cp=" + classPath);
@@ -121,8 +132,7 @@ public final class JazzerFramework implements FuzzFramework {
         return command;
     }
 
-    private static File getJazzerExecutable(File outputDir) throws IOException {
-        String executableName = "jazzer";
+    private static File getJazzerResource(File outputDir, String resourceName) throws IOException {
         String resourcePathPrefix;
         if (SystemUtils.IS_OS_MAC) {
             resourcePathPrefix = "mac";
@@ -131,23 +141,22 @@ public final class JazzerFramework implements FuzzFramework {
         } else {
             throw new IllegalStateException("Operating system not supported");
         }
-        String[] resourceNames = new String[]{"jazzer_standalone.jar", executableName};
         File bin = new File(outputDir, "bin");
         FileUtil.ensureDirectory(bin);
-        File jazzerExec = new File(bin, executableName);
-        for (String resourceName : resourceNames) {
-            String resourcePath = resourcePathPrefix + File.separator + resourceName;
-            try (InputStream in = JazzerFramework.class.getResourceAsStream(resourcePath)) {
-                if (in == null) {
-                    throw new IllegalStateException("Unable to locate Jazzer resource: " + resourcePath);
-                }
-                File out = new File(bin, resourceName);
-                Files.copy(in, out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        String resourcePath = resourcePathPrefix + File.separator + resourceName;
+        return getJazzerResource(outputDir, resourcePath, resourceName);
+    }
+
+    private static File getJazzerResource(File outputDir, String resourcePath, String resourceName) throws IOException {
+        File bin = new File(outputDir, "bin");
+        FileUtil.ensureDirectory(bin);
+        try (InputStream in = JazzerFramework.class.getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                throw new IllegalStateException("Unable to locate Jazzer resource: " + resourcePath);
             }
+            File out = new File(bin, resourceName);
+            Files.copy(in, out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return out;
         }
-        if (!jazzerExec.setExecutable(true)) {
-            throw new IllegalStateException("Failed to assign executable permissions to Jazzer executable");
-        }
-        return jazzerExec;
     }
 }
