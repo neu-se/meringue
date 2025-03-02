@@ -2,7 +2,7 @@ package edu.neu.ccs.prl.meringue;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
-import org.jacoco.agent.rt.internal_4742761.PreMain;
+import org.jacoco.agent.rt.internal_aeaf9ab.PreMain;
 import org.jacoco.core.analysis.Analyzer;
 
 import java.io.File;
