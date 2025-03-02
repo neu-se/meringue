@@ -177,7 +177,7 @@ public class CoverageCalculator {
         public void analyzeClass(final byte[] buffer, final String location) {
             try {
                 super.analyzeClass(buffer, location);
-            } catch (IOException e) {
+            } catch (IOException | IllegalArgumentException e) {
                 // Suppress the exception so that other classes are still analyzed
             }
         }
@@ -189,7 +189,7 @@ public class CoverageCalculator {
             } else {
                 try (InputStream in = Files.newInputStream(file.toPath())) {
                     return analyzeAll(in, file.getPath());
-                } catch (IOException e) {
+                } catch (IOException | IllegalArgumentException e) {
                     // Suppress the exception so that other classes are still analyzed
                     return 0;
                 }
