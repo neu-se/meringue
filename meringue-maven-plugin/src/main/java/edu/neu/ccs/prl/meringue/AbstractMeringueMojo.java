@@ -13,6 +13,8 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 
 abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValues {
@@ -82,6 +84,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     private RepositorySystem repositorySystem;
     @Component
     private ArtifactHandlerManager artifactHandlerManager;
+    /**
+     * Temporary directory unique to this instance.
+     * Ensures that different executions of the plugin write to different directories.
+     */
+    private File temporaryDirectoryPerInstance;
 
     @Override
     public MavenSession getSession() throws MojoExecutionException {
@@ -141,7 +148,14 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
 
     @Override
     public File getTemporaryDirectory() throws MojoExecutionException {
-        return temporaryDirectory;
+        if (temporaryDirectoryPerInstance == null) {
+            try {
+                temporaryDirectoryPerInstance = Files.createTempDirectory(temporaryDirectory.toPath(), "meringue-").toFile();
+            } catch (IOException e) {
+                throw new MojoExecutionException("Failed to create temporary directory", e);
+            }
+        }
+        return temporaryDirectoryPerInstance;
     }
 
     @Override
