@@ -84,6 +84,10 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     private RepositorySystem repositorySystem;
     @Component
     private ArtifactHandlerManager artifactHandlerManager;
+    /**
+     * Temporary directory unique to this instance.
+     * Ensures that different executions of the plugin write to different directories. 
+     */
     private File temporaryDirectoryPerInstance;
 
     @Override
