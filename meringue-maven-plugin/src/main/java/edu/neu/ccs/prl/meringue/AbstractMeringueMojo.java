@@ -150,6 +150,11 @@ abstract class AbstractMeringueMojo extends AbstractMojo implements CampaignValu
     public File getTemporaryDirectory() throws MojoExecutionException {
         if (temporaryDirectoryPerInstance == null) {
             try {
+                if (!temporaryDirectory.exists()) {
+                    if (!temporaryDirectory.mkdirs()) {
+                        throw new MojoExecutionException("Failed to create temporary directory");
+                    }
+                }
                 temporaryDirectoryPerInstance = Files.createTempDirectory(temporaryDirectory.toPath(), "meringue-").toFile();
             } catch (IOException e) {
                 throw new MojoExecutionException("Failed to create temporary directory", e);
